@@ -1,0 +1,2 @@
+#!/bin/bash
+logkeys --start

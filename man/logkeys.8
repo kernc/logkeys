@@ -1,0 +1,220 @@
+.TH logkeys 8 2009-12-13
+.SH NAME
+logkeys \- a GNU/Linux keylogger that works!
+.SH SYNOPSIS
+.B logkeys
+\fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB--no-func-keys\fR]
+.br
+.B logkeys
+\fB-k\fR
+.br
+.B logkeys
+[\fB--export-keymap=\fIkeymap\fR]
+.SH DESCRIPTION
+logkeys is a linux keylogger. It is no more advanced than other available linux
+keyloggers, notably \fBlkl\fR and \fBuberkey\fR, but is a bit newer, more up to date, it
+doesn't unreliably repeat keys and it shouldn't crash your X. All in all, it
+just seems to work. It relies on the event interface of Linux input subsystem 
+(normally devices \fI/dev/input/eventX\fR).
+.PP
+Once set, it logs all common character 
+and function keys, while also being fully aware of Shift and AltGr key modifiers.
+It tries to automatically determine the correct input device, and may in some cases
+also get the character keys mapping right.
+.PP
+It is installed setuid root and may be invoked by any user anytime, either directly
+or using the accompanying \fBlkl\fR and \fBlklk\fR scripts.
+.SH OPTIONS
+Non-optional arguments are required for short options too.
+.TP
+\fB-s\fR, \fB-\-start\fR
+Starts the keylogging daemon process.
+.TP
+\fB-k\fR, \fB-\-kill\fR
+Terminates the running logkeys process.
+.TP
+\fB-o\fR, \fB-\-output\fR=\fIlogfile\fR
+Set ouput log file to \fIlogfile\fR. If no \fB-o\fR option is provided, logkeys
+appends to \fI/var/log/logkeys.log\fR file. If \fIlogfile\fR doesn't exist, logkeys
+creates the file with 600 permissions.
+.IP
+See also \fBLOGFILE FORMAT\fR section.
+.TP
+\fB-m\fR, \fB-\-keymap\fR=\fIkeymap\fR
+Use file \fIkeymap\fR as input keymap for processing pressed keys.
+.IP
+This option works best if \fIkeymap\fR is hand corrected file, which had been
+previously exported by \fB--export-keymap\fR.
+.IP
+See also \fBKEYMAP FORMAT\fR section.
+.IP
+\fB-m\fR and \fB-u\fR option are mutually exclusive.
+.TP
+\fB-u\fR, \fB-\-us-keymap\fR
+This option makes logkeys interpret keys as on standard US keyboard.
+.IP
+\fB-u\fR and \fB-m\fR option are mutually exclusive.
+.TP
+\fB-\-export-keymap\fR=\fIkeymap\fR
+This option makes logkeys export dynamic keymap as obtained from \fIdumpkeys\fR(1)
+to file \fIkeymap\fR and then exit.
+.IP
+\fIkeymap\fR can later be used with \fB-m\fR option to override automatic keymap 
+"calculation", which may be wrong.
+.IP
+It is advised that you manually edit \fIkeymap\fR and correct any mistakes as well
+as complete deficient entries. It is also advised that you use \fB-\-export-keymap\fR
+on a virtual terminal outside of X (\fI/dev/ttyX\fR).
+.IP
+See section \fBKEYMAP FORMAT\fR for exported keymap format.
+.TP
+\fB-\-no-func-keys\fR
+This option makes logkeys log all and only character key presses 
+(1, 2, ..., q, w, e, ..., a, s, d, f, ..., ", @, \\, ...).
+.IP
+This option may be useful when correct \fIkeymap\fR can reliably be 
+expected (i.e. by providing it with \fB-m\fR option). Then only character keys are
+logged, influenced by Shift and AltGr modifiers.
+.SH FILES
+.TP
+\fB/var/log/logkeys.log\fR
+When \fB-o\fR option is not used, logkeys appends to default log file.
+.SH "LOGFILE FORMAT"
+Log files are \fBUTF-8 encoded\fR.
+.PP
+Each logging session is enclosed in "Logging started..." and "Logging stopped at 
+<timestamp>" strings. Whenever Enter key (Return key) is pressed, a timestamp is 
+appended on a new line.
+.PP
+Timestamp format is "%F\ %T%z", which results in "YYYY-mm-dd HH:MM:SS+ZZZZ".
+Timestamp is separated from the logged keys by one '>' symbol.
+.PP
+All character key presses are logged as they appear. All 
+function key presses are replaced with strings as obtained from \fIkeymap\fR file, or
+as hardcoded when no \fIkeymap\fR file is provided.
+.PP
+If a key is pressed down long enough so it repeats, it is logged only once and then 
+"<#+DD>" is appended, which hints the key was repeated DD more times. The DD figure 
+is not to be relied on. DD is in decimal format.
+.PP
+If a keypress results in keycode, which is not recognized (i.e. key not found on a standard US 
+or Intl 105-key keyboard), then the string "<E-XX>" is appended, where XX is the
+received keycode in hexadecimal format. All new "WWW", "E-Mail", "Volume+", "Media",
+"Help", etc. keys will result in this error string.
+.PP
+Using US keyboard layout, one example log file could look like:
+.IP
+Logging started ...
+.IP
+2009-12-11 09:58:17+0100 > lkl
+.br
+2009-12-11 09:58:20+0100 > sudo cp <RShift>~/foo.<Tab> /usr/bin
+.br
+2009-12-11 09:58:26+0100 > <LShift>R00<LShift>T_p455\\\\/0rD
+.br
+2009-12-11 09:58:39+0100 > <Up><Up><Home>sudo
+.br
+2009-12-11 09:58:44+0100 > c<#+53><BckSp><#+34><LCtrl>clklk
+.IP
+Logging stopped at 2009-12-11 09:58:44+0100
+.PP
+If the same log was obtained by a logkeys process invoked with \fB-\-no-func-keys\fR
+option, it would look like:
+.IP
+Logging started ...
+.IP
+2009-12-11 09:58:17+0100 > lkl
+.br
+2009-12-11 09:58:20+0100 > sudo cp ~/foo.  /usr/bin
+.br
+2009-12-11 09:58:26+0100 > R00T_p455\\\\/0rD
+.br
+2009-12-11 09:58:39+0100 > sudo
+.br
+2009-12-11 09:58:44+0100 > c<#+53>clklk
+.IP
+Logging stopped at 2009-12-11 09:58:44+0100
+.PP
+Even when \fB-\-no-func-keys\fR is in effect, Space and Tab key presses are logged as
+a single space character.
+.SH "KEYMAP FORMAT"
+The keymap file is expected to be \fBUTF-8 encoded\fR.
+.PP
+Each line of file represents either one character key or one function key.
+The format specifies \fBat least two\fR and \fBup to three\fR space-delimited 
+characters on character key lines (first without modifiers, second with Shift in 
+action, optional third with AltGr in action), and up to \fB7 characters long\fR
+string on function key lines.
+.PP
+First three lines in a Slovene keymap file look like:
+.IP
+<Esc>
+.br
+1 ! ~
+.br
+2 " ˇ
+.br
+...
+.PP
+How does one know which lines belong to character keys and which lines to function
+keys?
+.PP
+Well, the easiest way is to use \fB-\-export-keymap\fR, and examine the exported
+keymap. Make sure you export in a virtual terminal (ttyX) and not in X as this way
+more keys could get exported correctly (don't ask me why).
+.PP
+Basically, \fB-\-export-keymap\fR ouputs 105 lines for 105 keys, even if some of
+those keys aren't located on your keyboard. Lines 1, 14, 15, 28, 29, 42, 54-83,
+85-105 belong to function keys, all other lines (2-13, 16-27, 30-41, 43-53, 84)
+belong to character keys.
+.PP
+Line 57 is reserved for Space and it should always be ' '. Line 84 is reserved for
+the key just right to left Shift that is present on some international layouts.
+Other lines can be quite reliably determined by looking at one \fBexported keymap\fR.
+The keys generally follow the order of their appearance on keyboard, top-to-bottom 
+left-to-right.
+.PP
+If you create full and completely valid keymap for your particular language,
+please upload it to project website or send it to me by e-mail. Thanks.
+.SH EXAMPLES
+To print short help:
+.IP
+$ logkeys
+.PP
+To start logging to a custom log file with dynamically generated keymap:
+.IP
+$ logkeys --start --output /home/user/.secret/log
+.PP
+To start logging to default log file on a standard US keyboard:
+.IP
+$ logkeys --start --us-keymap
+.PP
+To export dynamically generated keymap to file:
+.IP
+$ logkeys --export-keymap my_keymap
+.PP
+To start logging to default log file with a custom keymap:
+.IP
+$ logkeys --start --keymap my_keymap
+.PP
+To end running logkeys process:
+.IP
+$ logkeys --kill
+.PP
+After updated to one's liking, helper scripts \fI/usr/bin/lkl\fR (start) and 
+\fI/usr/bin/lklk\fR (kill) can be used as well.
+.SH BUGS
+logkeys relies on numeric output of \fIdumpkeys\fR(1), which \fIkeymaps\fR(5)
+manual page specifically discourages as unportable.
+.PP
+Be nice and hope nothing breaks.
+.PP
+If you come across any bugs, please report them on project website, issues page:
+.IP
+http://code.google.com/p/logkeys/issues
+.SH AUTHOR
+.PP
+logkeys was written by Kernc <kerncece+logkeys@gmail.com>.
+.PP
+You can always obtain the latest version and information at project website:
+<http://code.google.com/p/logkeys/>.

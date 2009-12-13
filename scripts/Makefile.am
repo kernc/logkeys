@@ -1,0 +1,1 @@
+bin_SCRIPTS = lkl lklk

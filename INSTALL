@@ -1,0 +1,41 @@
+===============================================================================
+ logkeys keylogger - instalation instructions
+===============================================================================
+
+Provided your GNU/Linux distribution doesn't include logkeys package in its
+repositories, manual installation of logkeys from source is as easy as:
+
+ $ tar xvzf logkeys-0.1.0.tar.gz   # to extract the logkeys archive
+ 
+ $ cd logkeys-0.1.0/build  # move to build directory to build there
+ $ ../configure            # invoke configure from parent directory
+ $ make                    # make compiles what it needs to compile
+ ( become superuser now )  # you need root to install in system dir
+ # make install            # installs binaries, manuals and scripts
+
+That's it. If everything went through fine, you can probably start using it.
+
+See README file for usage instructions and notes.
+
+
+To install the binaries in path other than /usr/local/bin, use configure with
+--prefix switch, for example:
+
+ $ ../configure --prefix=/usr
+
+Along with other standard configure options, you can also use:
+
+ $ ../configure --enable-evdev-path=PATH
+
+to have logkeys look for input event devices in PATH ( $(PATH)/eventX ) instead
+of preconfigured default /dev/input (/dev/input/eventX), and
+
+ $ ../configure --enable-evdev=DEV
+
+to have logkeys define static event device DEV (i.e. /dev/input/eventX) instead
+of looking for it in default /dev/input path or custom evdev-path.
+
+The input event device we are referring to, here, is the kernel event interface
+echoing keyboard events. If using either of these two --enable-evdev*
+switches, make sure you provided correct PATH/DEV.
+
