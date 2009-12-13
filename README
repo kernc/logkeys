@@ -14,9 +14,9 @@
 +------------------------------------------------
  0. Licence
 ===============================================================================
-logkeys is dual licenced under the terms of either GNU GPLv3 or later, or 
+logkeys is dual licensed under the terms of either GNU GPLv3 or later, or 
 WTFPLv2 or later. It is entirely your choice! See COPYING for further 
-licencing information.
+licensing information.
 
 
 +------------------------------------------------
@@ -90,7 +90,7 @@ and covertly. You can modify the scripts as you like.
 Note that logkeys is installed setuid, so the root password need not be
 provided at runtime.
 
-Default log file /var/log/logkeys.log and is not readable by others.
+Default log file is /var/log/logkeys.log and is not readable by others.
 
 I suggest you first test the program manually with
 
@@ -107,6 +107,13 @@ layout, use -u switch. Make sure your terminal character locale is set to UTF-8
  $ locale
  LANG=xx_YY.UTF-8
  LC_CTYPE="xx_YY.UTF-8"
+ ...
+
+or alternatively, you need en_US.UTF-8 locale available on your system
+
+ $ locale -a
+ ...
+ en_US.UTF-8
  ...
 
 otherwise you will only see odd characters (like ꑶ) when pressing character
@@ -127,7 +134,7 @@ missing or incorrectly determined mappings. From then on, execute logkeys by
 Again, see if it now works correctly (character keys appear correct when you
 are viewing the log file in editor), and opt to modify bin/lkl starter script.
 
-logkeys acts as a daemon, and you stop the running logger proccess with
+logkeys acts as a daemon, and you stop the running logger process with
 
  $ logkeys --kill
 
