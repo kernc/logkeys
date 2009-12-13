@@ -382,8 +382,6 @@ int main(int argc, char **argv) {
       return EXIT_SUCCESS;
     } //\ if (flag_export)
   }
-
-  // TODO: debian ne podpira setlocale en_US.UTF-8? tudi s praznim setlocale(""), ne dela prav :?
   
 #ifndef INPUT_EVENT_DEVICE  // sometimes X in /dev/input/eventX is different from one reboot to another
   
