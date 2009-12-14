@@ -83,8 +83,8 @@ When \fB-o\fR option is not used, logkeys appends to default log file.
 Log files are \fBUTF-8 encoded\fR.
 .PP
 Each logging session is enclosed in "Logging started..." and "Logging stopped at 
-<timestamp>" strings. Whenever Enter key (Return key) is pressed, a timestamp is 
-appended on a new line.
+<timestamp>" strings. Whenever Enter key (Return key) or Ctrl+C or Ctrl+D combination is pressed, 
+a timestamp is appended on a new line.
 .PP
 Timestamp format is "%F\ %T%z", which results in "YYYY-mm-dd HH:MM:SS+ZZZZ".
 Timestamp is separated from the logged keys by one '>' symbol.
@@ -114,9 +114,11 @@ Logging started ...
 .br
 2009-12-11 09:58:39+0100 > <Up><Up><Home>sudo
 .br
-2009-12-11 09:58:44+0100 > c<#+53><BckSp><#+34><LCtrl>clklk
+2009-12-11 09:58:44+0100 > c<#+53><BckSp><#+34><LCtrl>c
+.br
+2009-12-11 09:58:54+0100 > lklk
 .IP
-Logging stopped at 2009-12-11 09:58:44+0100
+Logging stopped at 2009-12-11 09:58:54+0100
 .PP
 If the same log was obtained by a logkeys process invoked with \fB-\-no-func-keys\fR
 option, it would look like:
@@ -131,9 +133,11 @@ Logging started ...
 .br
 2009-12-11 09:58:39+0100 > sudo
 .br
-2009-12-11 09:58:44+0100 > c<#+53>clklk
+2009-12-11 09:58:44+0100 > c<#+53>c
+.br
+2009-12-11 09:58:54+0100 > lklk
 .IP
-Logging stopped at 2009-12-11 09:58:44+0100
+Logging stopped at 2009-12-11 09:58:54+0100
 .PP
 Even when \fB-\-no-func-keys\fR is in effect, Space and Tab key presses are logged as
 a single space character.
