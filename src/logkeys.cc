@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
   
   wchar_t char_keytable[49] =  L"1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./<";
   wchar_t shift_keytable[49] = L"!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"~|ZXCVBNM<>?>";
-  wchar_t altgr_keytable[49] = L"\0@\0$\0\0{[]}\\\0qwertyuiop\0~asdfghjkl\0\0\0\0zxcvbnm\0\0\0|";  // \0 on no symbol; as obtained by `loadkeys us`
+  wchar_t altgr_keytable[49] = {0}; // old, US don't use AltGr key: L"\0@\0$\0\0{[]}\\\0qwertyuiop\0~asdfghjkl\0\0\0\0zxcvbnm\0\0\0|";  // \0 on no symbol; as obtained by `loadkeys us`
   
   const char char_or_func[] =  // c means character key, f means function key, _ is blank/error (_ used, don't change); all according to KEY_* defines from <linux/input.h>
     "_fccccccccccccff"
@@ -476,6 +476,7 @@ int main(int argc, char **argv) {
   char repeat[16];  // holds "key repeated" string of the format "<x%d>"
   bool shift_in_effect = false;
   bool altgr_in_effect = false;
+  bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
   int count_repeats = 0;  // count_repeats differs from the actual number of repeated characters!! only OS knows how these two values are related (by respecting configured repeat speed and delay)
 
   time_t cur_time;
@@ -525,11 +526,14 @@ int main(int argc, char **argv) {
         // on key press
         if (event.value == EV_MAKE) {
           
-          // on ENTER key append timestamp
-          if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER) {  // create new timestamp on ENTER
+          // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
+          if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
+              (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
             strftime(timestamp, sizeof(timestamp), "\n%F %T%z > ", localtime(&event.time.tv_sec));
-            fprintf (stdout, "%s", timestamp);
-            continue;  // don't log "<Enter>"
+            if (ctrl_in_effect)
+              fprintf(stdout, "%lc", char_keytable[to_char_array_index(scan_code)]);  // log C or D
+            fprintf (stdout, "%s", timestamp);  // then newline and timestamp
+            continue;  // but don't log "<Enter>"
           }
           
           if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
@@ -538,12 +542,18 @@ int main(int argc, char **argv) {
           if (scan_code == KEY_RIGHTALT)
             altgr_in_effect = true;
           
+          if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+            ctrl_in_effect = true;
+          
           // print character or string responding to received keycode
           if (char_or_func[scan_code] == 'c') {
             if (altgr_in_effect) {
               wchar_t wch = altgr_keytable[to_char_array_index(scan_code)];
               if (wch != L'\0') fprintf(stdout, "%lc", wch);
-              else fprintf(stdout, "%lc", char_keytable[to_char_array_index(scan_code)]);
+              else if (shift_in_effect)
+                fprintf(stdout, "%lc", shift_keytable[to_char_array_index(scan_code)]);
+              else
+                fprintf(stdout, "%lc", char_keytable[to_char_array_index(scan_code)]);
             } else if (shift_in_effect)
               fprintf(stdout, "%lc", shift_keytable[to_char_array_index(scan_code)]);
             else
@@ -565,6 +575,8 @@ int main(int argc, char **argv) {
             shift_in_effect = false;
           if (scan_code == KEY_RIGHTALT)
             altgr_in_effect = false;
+          if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+            ctrl_in_effect = false;
         }
         
         prev_code = scan_code;
