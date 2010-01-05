@@ -43,11 +43,13 @@ void usage() {
 "  -o, --output=FILE         log output to FILE [" DEFAULT_LOG_FILE "]\n"
 "  -u, --us-keymap           use en_US keymap instead of configured default\n"
 "  -k, --kill                kill running logkeys process\n"
+"  -d, --device=FILE         input event device [" INPUT_EVENT_PATH "X]\n"
 "  -?, --help                print this help\n"
 "      --export-keymap=FILE  export configured keymap to FILE and exit\n"
 "      --no-func-keys        don't log function keys, only character keys\n"
 "\n"
 "Examples: logkeys -s -m mylang.map -o ~/.secret/keys.log\n"
+"          logkeys -s -d /dev/input/event6\n"
 "          logkeys -k\n"
 "\n"
 "logkeys version: " PACKAGE_VERSION "\n"
@@ -151,6 +153,7 @@ int main(int argc, char **argv) {
   char *log_filename = (char*) DEFAULT_LOG_FILE;  // default log file
   char log_file_path[512]; // don't use paths longer than 512 B !!
   char *keymap_filename = NULL;  // path to keymap file to be used
+  char *device_filename = NULL;  // path to input event device if given with -d switch
 
   { // process options and arguments
     
@@ -160,9 +163,10 @@ int main(int argc, char **argv) {
       {"output",    required_argument, 0, 'o'},
       {"us-keymap", no_argument,       0, 'u'},
       {"kill",      no_argument,       0, 'k'},
+      {"device",    required_argument, 0, 'd'},
       {"help",      no_argument,       0, '?'},
-#define EXPORT_KEYMAP_INDEX 6
-      {"export-keymap", required_argument, &flag_export, 1},  // option_index is 6
+#define EXPORT_KEYMAP_INDEX 7
+      {"export-keymap", required_argument, &flag_export, 1},  // option_index is 7
       {"no-func-keys",  no_argument,       &flag_nofunc, 1},
       {0, 0, 0, 0}
     };
@@ -170,13 +174,14 @@ int main(int argc, char **argv) {
     char c;
     int option_index;
     
-    while ((c = getopt_long(argc, argv, "sm:o:uk?", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "sm:o:ukd:?", long_options, &option_index)) != -1)
       switch (c) {
         case 's': flag_start = true;                            break;
         case 'm': flag_keymap = true; keymap_filename = optarg; break;
         case 'o': log_filename = optarg;                        break;
         case 'u': flag_us_keymap = true;                        break;
         case 'k': flag_kill = true;                             break;
+        case 'd': device_filename = optarg;                     break;
         
         case  0 : 
           if (option_index == EXPORT_KEYMAP_INDEX)
@@ -385,19 +390,24 @@ int main(int argc, char **argv) {
   
 #ifndef INPUT_EVENT_DEVICE  // sometimes X in /dev/input/eventX is different from one reboot to another
   
-  // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  std::string output = exec("grep Name /proc/bus/input/devices | grep -nE '[Kk]eyboard|kbd'");
-  if (output == "ERR") { // if pipe errors, exit
-    fprintf(stderr, "%s: Cannot determine keyboard input event device: %s\n", argv[0], strerror(errno));
-    return EXIT_FAILURE;
-  }
+  char *INPUT_EVENT_DEVICE;
   
-  // the correct input event # is (output - 1)
-  std::stringstream input_fd_filename;
-  input_fd_filename << INPUT_EVENT_PATH;
-  input_fd_filename << (atoi(output.c_str()) - 1);
-  
-  const char *INPUT_EVENT_DEVICE = input_fd_filename.str().c_str();
+  if (device_filename == NULL) {  // no device given with -d switch, determine it automatically
+    // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
+    std::string output = exec("grep Name /proc/bus/input/devices | grep -nE '[Kk]eyboard|kbd'");
+    if (output == "ERR") { // if pipe errors, exit
+      fprintf(stderr, "%s: Cannot determine keyboard input event device: %s\n", argv[0], strerror(errno));
+      return EXIT_FAILURE;
+    }
+    
+    // the correct input event # is (output - 1)
+    std::stringstream input_fd_filename;
+    input_fd_filename << INPUT_EVENT_PATH;
+    input_fd_filename << (atoi(output.c_str()) - 1);
+    
+    INPUT_EVENT_DEVICE = (char*)input_fd_filename.str().c_str();
+    
+  } else INPUT_EVENT_DEVICE = device_filename;  // event device supplied as -d argument
 
 #endif//INPUT_EVENT_DEVICE
   

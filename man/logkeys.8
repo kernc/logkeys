@@ -3,7 +3,7 @@
 logkeys \- a GNU/Linux keylogger that works!
 .SH SYNOPSIS
 .B logkeys
-\fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB--no-func-keys\fR]
+\fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR] [\fB--no-func-keys\fR]
 .br
 .B logkeys
 \fB-k\fR
@@ -49,6 +49,11 @@ previously exported by \fB--export-keymap\fR.
 See also \fBKEYMAP FORMAT\fR section.
 .IP
 \fB-m\fR and \fB-u\fR option are mutually exclusive.
+.TP
+\fB-d\fR, \fB-\-device\fR=\fIdevice\fR
+Use \fIdevice\fR as keyboard input event device instead of \fI/dev/input/eventX\fR default.
+.IP
+You can determine the keyboard device to be used by examining \fI/proc/bus/input/devices\fR.
 .TP
 \fB-u\fR, \fB-\-us-keymap\fR
 This option makes logkeys interpret keys as on standard US keyboard.
