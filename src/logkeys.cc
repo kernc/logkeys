@@ -17,7 +17,9 @@
 #include <sys/file.h>
 #include <linux/input.h>
 
-#include <config.h>  // config produced from ./configure
+#ifdef HAVE_CONFIG_H
+# include <config.h>  // include config produced from ./configure
+#endif
 
 #define DEFAULT_LOG_FILE "/var/log/logkeys.log"
 #define TMP_PID_FILE     "/tmp/logkeys.pid.lock"
@@ -32,6 +34,10 @@
 //# define INPUT_EVENT_DEVICE "/dev/input/event4" // uncomment this if you want your input event device statically defined rather than "calculated" at runtime
 // better yet, use ./configure --enable-evdev=DEV to specify INPUT_EVENT_DEVICE !
 #endif//INPUT_EVENT_DEVICE
+
+#ifndef PACKAGE_VERSION
+# define PACKAGE_VERSION "0.1.0"  // if PACKAGE_VERSION wasn't defined in <config.h>
+#endif
 
 void usage() {
   fprintf(stderr,
@@ -305,7 +311,7 @@ int main(int argc, char **argv) {
       
       // replace any U+#### with 0x#### for easier parsing
       index = line.find("U+", 0);
-      while ((unsigned int) index != std::string::npos) {
+      while (static_cast<std::string::size_type>(index) != std::string::npos) {
         line[index] = '0'; line[index + 1] = 'x';
         index = line.find("U+", index);
       }
@@ -388,11 +394,11 @@ int main(int argc, char **argv) {
     } //\ if (flag_export)
   }
   
-#ifndef INPUT_EVENT_DEVICE  // sometimes X in /dev/input/eventX is different from one reboot to another
+#ifndef INPUT_EVENT_DEVICE  // sometimes X in /dev/input/eventX is different from one reboot to another, in that case, determine it dynamically
   
   char *INPUT_EVENT_DEVICE;
   
-  if (device_filename == NULL) {  // no device given with -d switch, determine it automatically
+  if (device_filename == NULL) {  // no device given with -d switch
     // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
     std::string output = exec("grep Name /proc/bus/input/devices | grep -nE '[Kk]eyboard|kbd'");
     if (output == "ERR") { // if pipe errors, exit
