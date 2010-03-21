@@ -22,7 +22,7 @@
 #endif
 
 #define DEFAULT_LOG_FILE "/var/log/logkeys.log"
-#define TMP_PID_FILE     "/tmp/logkeys.pid.lock"
+#define TMP_PID_FILE     "/var/run/logkeys.pid"
 
 #ifdef INPUT_EVENT_PREFIX  // may be defined by ./configure --enable-evdev-path=PATH
 # define INPUT_EVENT_PATH (INPUT_EVENT_PREFIX "/event")  // in which case use it
