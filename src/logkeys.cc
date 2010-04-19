@@ -204,10 +204,16 @@ int main(int argc, char **argv) {
   
   // kill existing logkeys process
   if (flag_kill) {
+    //~ if (readlink(TMP_PID_FILE, NULL, 0) != -1) {
+      //~ // TMP_PID_FILE is a symbolic link; stay safe from any "symlink attack"
+      //~ fprintf(stderr, "%s: " TMP_PID_FILE " is a symbolic link. Malicious?\n", argv[0]);
+      //~ return EXIT_FAILURE;
+    //~ }
     FILE *temp_file = fopen(TMP_PID_FILE, "r");
     pid_t pid;
     if ((temp_file != NULL && fscanf(temp_file, "%d", &pid) == 1 && fclose(temp_file) == 0) || 
         (sscanf( exec("pgrep logkeys").c_str(), "%d", &pid) == 1 && pid != getpid())) { // if reading PID from temp_file failed, try pgrep pipe
+        // TODO: replace pgrep with 'ps ax | grep taskname | grep -v grep'
       remove(TMP_PID_FILE);
       kill(pid, SIGINT);
       return EXIT_SUCCESS;
@@ -218,12 +224,13 @@ int main(int argc, char **argv) {
   
   // check for incompatible flags
   if (flag_keymap && flag_us_keymap) {
-    fprintf(stderr, "%s: Incompatible flags '-m' and '-u'", argv[0]);
+    fprintf(stderr, "%s: Incompatible flags '-m' and '-u'\n", argv[0]);
     usage();
     return EXIT_FAILURE;
   }
   
   // if user provided a relative path to output file :/ stupid user :/
+  // TODO: use char*canonicalize_file_name(const char *name) instead
   if (log_filename[0] != '/') {
     if (getcwd(log_file_path, sizeof(log_file_path) - strlen(log_filename) - 2 /* '/' and '\0' */) == NULL) {
       fprintf(stderr, "%s: Error copying CWD: %s%s\n", argv[0], strerror(errno), 
@@ -257,7 +264,7 @@ int main(int argc, char **argv) {
     
     while (!feof(stdin)) {
       
-      if (i >= sizeof(char_or_func)) break;  // only read up to 128 keycode bindings (currently 105:)
+      if (i >= sizeof(char_or_func)) break;  // only read up to 128 keycode bindings (currently 106:)
       
       if (char_or_func[i] != '_') {
         if(fgets(line, sizeof(line), stdin));  // wrapped in if() to avoid compiler warning; handle errors later
@@ -371,25 +378,28 @@ int main(int argc, char **argv) {
     
     // export keymap to file as requested
     if (flag_export) {
-      stdout = freopen(keymap_filename, "w", stdout);
-      if (stdout == NULL) {
+      int keymap_fd;
+      if ((keymap_fd = open(keymap_filename, O_CREAT | O_EXCL | O_WRONLY)) == -1) {
         fprintf(stderr, "%s: Error opening keymap output file '%s': %s\n", argv[0], keymap_filename, strerror(errno));
         return EXIT_FAILURE;
       }
-      
+      char buffer[32];
+      int buflen;
       for (unsigned int i = 0; i < sizeof(char_or_func); ++i) {
         if (char_or_func[i] == 'c') {
           index = to_char_array_index(i);
-          fprintf(stdout, "%lc %lc", char_keytable[index], shift_keytable[index]);
           if (altgr_keytable[index] != L'\0')
-            fprintf(stdout, " %lc\n", altgr_keytable[index]);
-          else fprintf(stdout, "\n");
+            buflen = sprintf(buffer, "%lc %lc %lc\n", char_keytable[index], shift_keytable[index], altgr_keytable[index]);
+          else
+            buflen = sprintf(buffer, "%lc %lc\n", char_keytable[index], shift_keytable[index]);;
+          write(keymap_fd, buffer, buflen);
         } else if (char_or_func[i] == 'f') {
-          fprintf(stdout, "%s\n", func_keytable[to_func_array_index(i)]);
+          buflen = sprintf(buffer, "%s\n", func_keytable[to_func_array_index(i)]);
+          write(keymap_fd, buffer, buflen);
         }
       }
+      close(keymap_fd);
       fprintf(stderr, "%s: Written keymap to file '%s'\n", argv[0], keymap_filename);
-      fclose(stdout);
       return EXIT_SUCCESS;
     } //\ if (flag_export)
   }
@@ -448,38 +458,41 @@ int main(int argc, char **argv) {
   } //\ daemon
   
   // create temp file carrying PID for later retrieval
-  int temp_fd;
-  if ((temp_fd = open(TMP_PID_FILE, O_WRONLY | O_CREAT, 0600)) == -1) {
-    fprintf(stderr, "%s: Error opening temporary file '" TMP_PID_FILE "': %s\n", argv[0], strerror(errno));
-    return EXIT_FAILURE;
-  }
-  if (flock(temp_fd, LOCK_EX | LOCK_NB) == 0) {  // this is the first process to request temp file, now block all others
-    if (flock(temp_fd, LOCK_SH | LOCK_NB) == -1) {
-      fprintf(stderr, "%s: Error obtaining lock on temporary file '" TMP_PID_FILE "': %s\n", argv[0], strerror(errno));
-      return EXIT_FAILURE;
-    }
+  int temp_fd = open(TMP_PID_FILE, O_WRONLY | O_CREAT | O_EXCL, 0644);
+  if (temp_fd != -1) {
     char pid_str[16] = {0};
     sprintf(pid_str, "%d", getpid());
     if (write(temp_fd, pid_str, strlen(pid_str)) == -1) {
       fprintf(stderr, "%s: Error writing to temporary file '" TMP_PID_FILE "': %s\n", argv[0], strerror(errno));
     }
-  } else {  // another logkeys process is already running, therefore terminate this one
-    fprintf(stderr, "%s: Another process already running. Quitting.\n", argv[0]);
+  }
+  else {
+    if (errno == EEXIST)
+      fprintf(stderr, "%s: Another process already running. Quitting.\n", argv[0]);
+    else fprintf(stderr, "%s: Error opening temporary file '" TMP_PID_FILE "': %s\n", argv[0], strerror(errno));
     return EXIT_FAILURE;
   } //\ temp file
   
   // open input device for reading
+  // TODO: canonical input event device + symlink
   int input_fd = open(INPUT_EVENT_DEVICE, O_RDONLY | O_NONBLOCK);
   if (input_fd == -1) {
     fprintf(stderr, "%s: Error opening input event device '%s': %s\n", argv[0], INPUT_EVENT_DEVICE, strerror(errno));
+    remove(TMP_PID_FILE);
     return EXIT_FAILURE;
   }
   
+  // if log file is other than default, then better seteuid() to the getuid() in order to ensure user can't write to where she shouldn't
+  if (strcmp(log_filename, DEFAULT_LOG_FILE) != 0) {
+    seteuid(getuid());
+    setegid(getgid());
+  }
   // open log file as stdout (if file doesn't exist, create it with safe 0600 permissions)
   umask(0177);
   stdout = freopen(log_filename, "a", stdout);
   if (stdout == NULL) {
     fprintf(stderr, "%s: Error opening output file '%s': %s\n", argv[0], log_filename, strerror(errno));
+    remove(TMP_PID_FILE);
     return EXIT_FAILURE;
   }
   
