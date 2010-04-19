@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #include <linux/input.h>
 
 #ifdef HAVE_CONFIG_H
