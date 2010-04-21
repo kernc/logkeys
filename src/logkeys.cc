@@ -213,8 +213,7 @@ int main(int argc, char **argv) {
     FILE *temp_file = fopen(TMP_PID_FILE, "r");
     pid_t pid;
     if ((temp_file != NULL && fscanf(temp_file, "%d", &pid) == 1 && fclose(temp_file) == 0) || 
-        (sscanf( exec("pgrep logkeys").c_str(), "%d", &pid) == 1 && pid != getpid())) { // if reading PID from temp_file failed, try pgrep pipe
-        // TODO: replace pgrep with 'ps ax | grep taskname | grep -v grep'
+        (sscanf(exec((std::string("ps ax | grep '") + argv[0] + "' | grep -v grep").c_str()).c_str(), "%d", &pid) == 1 && pid != getpid())) { // if reading PID from temp_file failed, try ps pipe
       remove(TMP_PID_FILE);
       kill(pid, SIGINT);
       return EXIT_SUCCESS;

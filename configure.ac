@@ -18,9 +18,9 @@ AC_CHECK_PROG([FOUND_GREP], [grep], [yes], [no])
 if test x"$FOUND_GREP" = xno ; then
 	AC_MSG_ERROR([Required program grep is missing.])
 fi
-AC_CHECK_PROG([FOUND_PGREP], [pgrep], [yes], [no])
-if test x"$FOUND_PGREP" = xno ; then
-	AC_MSG_ERROR([Required program pgrep is missing.])
+AC_CHECK_PROG([FOUND_PS], [ps], [yes], [no])
+if test x"$FOUND_PS" = xno ; then
+	AC_MSG_ERROR([Required program ps is missing.])
 fi
 AC_CHECK_PROG([FOUND_DUMPKEYS], [dumpkeys], [yes], [no])
 if test x"$FOUND_DUMPKEYS" = xno ; then
