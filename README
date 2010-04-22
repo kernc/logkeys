@@ -16,7 +16,7 @@
 ===============================================================================
 logkeys is dual licensed under the terms of either GNU GPLv3 or later, or 
 WTFPLv2 or later. It is entirely your choice! See COPYING for further 
-licensing information.
+information about licensing.
 
 
 +------------------------------------------------
@@ -44,33 +44,11 @@ repositories, manual installation of logkeys from source is as easy as:
  ( become super↙user now )    # you need root to install in system dir
  # make install               # installs binaries, manuals and scripts
 
-That's it. If everything went through fine (as it mostly should, I think), you
-can probably skip ahead to the next section now.
+That's it.
 
 To ever uninstall logkeys, remove accompanying scripts and manuals, issue
 
  # make uninstall    # in the same logkeys-0.1.0/build dir from before
-
-To install the binaries in path other than /usr/local/bin, use configure with
---prefix switch, for example:
-
- $ ../configure --prefix=/usr
-
-Along with other standard configure options, you can also use:
-
- $ ../configure --enable-evdev-path=PATH
-
-to have logkeys look for input event devices in PATH ( $(PATH)/eventX ) instead
-of preconfigured default /dev/input (/dev/input/eventX), and
-
- $ ../configure --enable-evdev=DEV
-
-to have logkeys define static event device DEV (i.e. /dev/input/eventX) instead
-of looking for it in default /dev/input path or custom evdev-path.
-
-The input event device we are referring to, here, is the kernel event interface
-echoing keyboard events. If using either of these two --enable-evdev*
-switches, make sure you provided correct PATH/DEV.
 
 A copy of these instructions is in the accompanying INSTALL file.
 
@@ -169,7 +147,8 @@ Report any bugs and request reasonable features on the issues list page
 
  http://code.google.com/p/logkeys/issues .
 
-Always provide descriptively keyworded summary and description.
+When opening new issues, always provide descriptively keyworded summary and
+description.
 
 You are more than welcome to implement unreasonable features yourself, as well
 as hack the program to your liking.

@@ -682,8 +682,6 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_dependency_tracking
-enable_evdev_path
-enable_evdev
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1312,8 +1310,6 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-evdev-path=PATH  Search for input event devices in PATH
-  --enable-evdev=DEV  Define input event device as DEV
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -3507,53 +3503,6 @@ if test x"$FOUND_DUMPKEYS" = xno ; then
 	as_fn_error "Required program dumpkeys is missing." "$LINENO" 5
 fi
 
-# Add --enable-evdev-path option
-# Check whether --enable-evdev-path was given.
-if test "${enable_evdev_path+set}" = set; then :
-  enableval=$enable_evdev_path;
-cat >>confdefs.h <<_ACEOF
-#define INPUT_EVENT_PREFIX "$enableval"
-_ACEOF
-
-    as_ac_File=`$as_echo "ac_cv_file_$enableval" | $as_tr_sh`
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $enableval" >&5
-$as_echo_n "checking for $enableval... " >&6; }
-if { as_var=$as_ac_File; eval "test \"\${$as_var+set}\" = set"; }; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r "$enableval"; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-eval ac_res=\$$as_ac_File
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-eval as_val=\$$as_ac_File
-   if test "x$as_val" = x""yes; then :
-
-else
-  as_fn_error "PATH provided in --enable-evdev-path does not exist. $enableval is not a valid directory!" "$LINENO" 5
-
-fi
-
-
-
-fi
-
-# Add --enable-evdev option
-# Check whether --enable-evdev was given.
-if test "${enable_evdev+set}" = set; then :
-  enableval=$enable_evdev;
-cat >>confdefs.h <<_ACEOF
-#define INPUT_EVENT_DEVICE "$enableval"
-_ACEOF
-
-fi
-
 # Checks for files
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for /dev/input" >&5
 $as_echo_n "checking for /dev/input... " >&6; }
@@ -3573,7 +3522,7 @@ $as_echo "$ac_cv_file__dev_input" >&6; }
 if test "x$ac_cv_file__dev_input" = x""yes; then :
 
 else
-  as_fn_error "Input event interface devices not at expected path! Use --enable-evdev-path to set the location of input event devices, e.g., ./configure --enable-evdev-path=/dev/input/ for event devices /dev/input/eventX." "$LINENO" 5
+  as_fn_error "Input event interface devices not found in expected location /dev/input/eventX !" "$LINENO" 5
 
 fi
 
@@ -3996,7 +3945,7 @@ fi
 done
 
 
-for ac_header in cstdio cerrno cstring sstream cstdlib csignal unistd.h getopt.h sys/file.h linux/input.h
+for ac_header in cstdio cerrno cstring cassert sstream cstdlib csignal error.h unistd.h getopt.h sys/file.h sys/stat.h linux/input.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_cxx_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -4007,7 +3956,7 @@ eval as_val=\$$as_ac_Header
 _ACEOF
 
 else
-  as_fn_error "Expected header missing!" "$LINENO" 5
+  as_fn_error "Expected header file is missing!" "$LINENO" 5
 
 fi
 
@@ -4440,7 +4389,7 @@ $as_echo "#define HAVE_WORKING_FORK 1" >>confdefs.h
 
 fi
 
-for ac_func in geteuid getcwd memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setgid setuid strftime localtime fflush read sleep time
+for ac_func in geteuid error error_at_line exit on_exit memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid getuid getgid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setegid seteuid strftime localtime fflush read sleep time
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -4451,7 +4400,7 @@ eval as_val=\$$as_ac_var
 _ACEOF
 
 else
-  as_fn_error "Expected function missing!" "$LINENO" 5
+  as_fn_error "Expected function is missing!" "$LINENO" 5
 
 fi
 done

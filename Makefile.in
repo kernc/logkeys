@@ -34,7 +34,7 @@ POST_UNINSTALL = :
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
-	$(top_srcdir)/configure COPYING INSTALL TODO depcomp \
+	$(top_srcdir)/configure COPYING ChangeLog INSTALL TODO depcomp \
 	install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -190,7 +190,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
 SUBDIRS = src man scripts
-EXTRA_DIST = build man/logkeys.8 scripts/lkl scripts/lklk
+EXTRA_DIST = src/keytables.cc build man/logkeys.8 scripts/lkl scripts/lklk
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

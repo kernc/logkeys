@@ -3,6 +3,9 @@
 /* Define to 1 if you have the `atoi' function. */
 #undef HAVE_ATOI
 
+/* Define to 1 if you have the <cassert> header file. */
+#undef HAVE_CASSERT
+
 /* Define to 1 if you have the <cerrno> header file. */
 #undef HAVE_CERRNO
 
@@ -20,6 +23,18 @@
 
 /* Define to 1 if you have the <cstring> header file. */
 #undef HAVE_CSTRING
+
+/* Define to 1 if you have the `error' function. */
+#undef HAVE_ERROR
+
+/* Define to 1 if you have the `error_at_line' function. */
+#undef HAVE_ERROR_AT_LINE
+
+/* Define to 1 if you have the <error.h> header file. */
+#undef HAVE_ERROR_H
+
+/* Define to 1 if you have the `exit' function. */
+#undef HAVE_EXIT
 
 /* Define to 1 if you have the `fclose' function. */
 #undef HAVE_FCLOSE
@@ -51,11 +66,11 @@
 /* Define to 1 if you have the `fscanf' function. */
 #undef HAVE_FSCANF
 
-/* Define to 1 if you have the `getcwd' function. */
-#undef HAVE_GETCWD
-
 /* Define to 1 if you have the `geteuid' function. */
 #undef HAVE_GETEUID
+
+/* Define to 1 if you have the `getgid' function. */
+#undef HAVE_GETGID
 
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
@@ -65,6 +80,9 @@
 
 /* Define to 1 if you have the `getpid' function. */
 #undef HAVE_GETPID
+
+/* Define to 1 if you have the `getuid' function. */
+#undef HAVE_GETUID
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
@@ -84,6 +102,9 @@
 /* Define to 1 if you have the `memset' function. */
 #undef HAVE_MEMSET
 
+/* Define to 1 if you have the `on_exit' function. */
+#undef HAVE_ON_EXIT
+
 /* Define to 1 if you have the `open' function. */
 #undef HAVE_OPEN
 
@@ -93,17 +114,17 @@
 /* Define to 1 if you have the `remove' function. */
 #undef HAVE_REMOVE
 
-/* Define to 1 if you have the `setgid' function. */
-#undef HAVE_SETGID
+/* Define to 1 if you have the `setegid' function. */
+#undef HAVE_SETEGID
+
+/* Define to 1 if you have the `seteuid' function. */
+#undef HAVE_SETEUID
 
 /* Define to 1 if you have the `setlocale' function. */
 #undef HAVE_SETLOCALE
 
 /* Define to 1 if you have the `setsid' function. */
 #undef HAVE_SETSID
-
-/* Define to 1 if you have the `setuid' function. */
-#undef HAVE_SETUID
 
 /* Define to 1 if you have the `sigaction' function. */
 #undef HAVE_SIGACTION
@@ -185,12 +206,6 @@
 
 /* Define to 1 if the system has the type `_Bool'. */
 #undef HAVE__BOOL
-
-/* User defined input event device */
-#undef INPUT_EVENT_DEVICE
-
-/* User defined input event device path */
-#undef INPUT_EVENT_PREFIX
 
 /* Name of package */
 #undef PACKAGE
