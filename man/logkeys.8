@@ -22,8 +22,11 @@ and function keys, while also being fully aware of Shift and AltGr key modifiers
 It tries to automatically determine the correct input device, and may in some cases
 also get the character keys mapping right.
 .PP
-It is installed setuid root and may be invoked by any user anytime, either directly
-or using the accompanying \fBlkl\fR and \fBlklk\fR scripts.
+Two helper \fBsetuid root\fR programs are shipped with logkeys. \fIllk\fR, which runs 
+\fIetc/logkeys-start.sh\fR script, and \fIllkk\fR, which runs \fIetc/logkeys-kill.sh\fR script.
+Because llk and llkk are installed setuid root, you can edit the two .sh scripts
+(mostly just logkeys-start.sh) to your preference, then issue logkeys via llk whenever 
+you have to run it covertly (e.g. when you don't want to su to root or type sudo password).
 .SH OPTIONS
 Non-optional arguments are required for short options too.
 .TP
@@ -111,7 +114,7 @@ Using US keyboard layout, one example log file could look like:
 .IP
 Logging started ...
 .IP
-2009-12-11 09:58:17+0100 > lkl
+2009-12-11 09:58:17+0100 > llk
 .br
 2009-12-11 09:58:20+0100 > sudo cp <RShift>~/foo.<Tab> /usr/bin
 .br
@@ -121,7 +124,7 @@ Logging started ...
 .br
 2009-12-11 09:58:44+0100 > c<#+53><BckSp><#+34><LCtrl>c
 .br
-2009-12-11 09:58:54+0100 > lklk
+2009-12-11 09:58:54+0100 > llkk
 .IP
 Logging stopped at 2009-12-11 09:58:54+0100
 .PP
@@ -130,7 +133,7 @@ option, it would look like:
 .IP
 Logging started ...
 .IP
-2009-12-11 09:58:17+0100 > lkl
+2009-12-11 09:58:17+0100 > llk
 .br
 2009-12-11 09:58:20+0100 > sudo cp ~/foo.  /usr/bin
 .br
@@ -140,7 +143,7 @@ Logging started ...
 .br
 2009-12-11 09:58:44+0100 > c<#+53>c
 .br
-2009-12-11 09:58:54+0100 > lklk
+2009-12-11 09:58:54+0100 > llkk
 .IP
 Logging stopped at 2009-12-11 09:58:54+0100
 .PP
@@ -206,12 +209,18 @@ To start logging to default log file with a custom keymap:
 .IP
 $ logkeys --start --keymap my_keymap
 .PP
+To use a custom event device (e.g. /dev/input/event4):
+.IP
+$ logkeys --start --device /dev/input/event4  # or just
+.br
+$ logkeys --start --device event4
+.PP
 To end running logkeys process:
 .IP
 $ logkeys --kill
 .PP
-After updated to one's liking, helper scripts \fI/usr/bin/lkl\fR (start) and 
-\fI/usr/bin/lklk\fR (kill) can be used as well.
+After \fIetc/logkeys-start.sh\fR is updated to one's liking, helper programs \fIbin/llk\fR (start) and 
+\fIbin/llkk\fR (kill) can be used as well.
 .SH BUGS
 logkeys relies on numeric output of \fIdumpkeys\fR(1), which \fIkeymaps\fR(5)
 manual page specifically discourages as unportable.

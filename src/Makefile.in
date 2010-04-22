@@ -32,7 +32,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = logkeys$(EXEEXT)
+bin_PROGRAMS = logkeys$(EXEEXT) llk$(EXEEXT) llkk$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -45,6 +45,12 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
+am_llk_OBJECTS = llk.$(OBJEXT)
+llk_OBJECTS = $(am_llk_OBJECTS)
+llk_LDADD = $(LDADD)
+am_llkk_OBJECTS = llkk.$(OBJEXT)
+llkk_OBJECTS = $(am_llkk_OBJECTS)
+llkk_LDADD = $(LDADD)
 am_logkeys_OBJECTS = logkeys.$(OBJEXT)
 logkeys_OBJECTS = $(am_logkeys_OBJECTS)
 logkeys_LDADD = $(LDADD)
@@ -57,8 +63,8 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(logkeys_SOURCES)
-DIST_SOURCES = $(logkeys_SOURCES)
+SOURCES = $(llk_SOURCES) $(llkk_SOURCES) $(logkeys_SOURCES)
+DIST_SOURCES = $(llk_SOURCES) $(llkk_SOURCES) $(logkeys_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -72,7 +78,7 @@ CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
 CXXDEPMODE = @CXXDEPMODE@
-CXXFLAGS = -Wall -O3
+CXXFLAGS = -Wall -O3 -DSYS_CONF_DIR=\"$(sysconfdir)\"
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -153,6 +159,8 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 logkeys_SOURCES = logkeys.cc
+llk_SOURCES = llk.cc
+llkk_SOURCES = llkk.cc
 all: all-am
 
 .SUFFIXES:
@@ -224,6 +232,12 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+llk$(EXEEXT): $(llk_OBJECTS) $(llk_DEPENDENCIES) 
+	@rm -f llk$(EXEEXT)
+	$(CXXLINK) $(llk_OBJECTS) $(llk_LDADD) $(LIBS)
+llkk$(EXEEXT): $(llkk_OBJECTS) $(llkk_DEPENDENCIES) 
+	@rm -f llkk$(EXEEXT)
+	$(CXXLINK) $(llkk_OBJECTS) $(llkk_LDADD) $(LIBS)
 logkeys$(EXEEXT): $(logkeys_OBJECTS) $(logkeys_DEPENDENCIES) 
 	@rm -f logkeys$(EXEEXT)
 	$(CXXLINK) $(logkeys_OBJECTS) $(logkeys_LDADD) $(LIBS)
@@ -234,6 +248,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/llk.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/llkk.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logkeys.Po@am__quote@
 
 .cc.o:
@@ -451,8 +467,10 @@ uninstall-am: uninstall-binPROGRAMS
 
 
 install-exec-hook:
-	chown root $(bindir)/logkeys
-	chmod u+s $(bindir)/logkeys
+	chown root\: $(bindir)/llk
+	chmod u+s $(bindir)/llk
+	chown root\: $(bindir)/llkk
+	chmod u+s $(bindir)/llkk
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

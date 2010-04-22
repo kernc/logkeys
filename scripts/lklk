@@ -1,2 +1,0 @@
-#!/bin/bash
-logkeys --kill
