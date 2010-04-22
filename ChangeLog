@@ -1,0 +1,11 @@
+v0.1.1 (?)
+  * bug fixes
+  * removed pgrep dependency
+  * PID file now in /var/run/
+  * symlink attack vulnerability fixes
+  * other security fixes
+  * code refactoring
+  * bug fixes
+  
+v0.1.0 (2010-01-05)
+  * initial release
