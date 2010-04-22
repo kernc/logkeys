@@ -601,6 +601,7 @@ CXXCPP
 FOUND_DUMPKEYS
 FOUND_PS
 FOUND_GREP
+FOUND_WHICH
 am__fastdepCXX_FALSE
 am__fastdepCXX_TRUE
 CXXDEPMODE
@@ -2666,6 +2667,7 @@ ac_config_headers="$ac_config_headers config.h"
 
 
 # Checks for programs.
+
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3378,7 +3380,50 @@ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ex
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
-# Checks for programs.
+# More checks for programs.
+
+# Extract the first word of "which", so it can be a program name with args.
+set dummy which; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_FOUND_WHICH+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$FOUND_WHICH"; then
+  ac_cv_prog_FOUND_WHICH="$FOUND_WHICH" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_FOUND_WHICH="yes"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_FOUND_WHICH" && ac_cv_prog_FOUND_WHICH="no"
+fi
+fi
+FOUND_WHICH=$ac_cv_prog_FOUND_WHICH
+if test -n "$FOUND_WHICH"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $FOUND_WHICH" >&5
+$as_echo "$FOUND_WHICH" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+if test x"$FOUND_WHICH" = xno ; then
+	as_fn_error "Required program 'which' is missing." "$LINENO" 5
+fi
+
 # Extract the first word of "grep", so it can be a program name with args.
 set dummy grep; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -3418,8 +3463,14 @@ fi
 
 
 if test x"$FOUND_GREP" = xno ; then
-	as_fn_error "Required program grep is missing." "$LINENO" 5
+	as_fn_error "Required program 'grep' is missing." "$LINENO" 5
 fi
+
+cat >>confdefs.h <<_ACEOF
+#define EXE_GREP "`which grep`"
+_ACEOF
+
+
 # Extract the first word of "ps", so it can be a program name with args.
 set dummy ps; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -3459,8 +3510,14 @@ fi
 
 
 if test x"$FOUND_PS" = xno ; then
-	as_fn_error "Required program ps is missing." "$LINENO" 5
+	as_fn_error "Required program 'ps' is missing." "$LINENO" 5
 fi
+
+cat >>confdefs.h <<_ACEOF
+#define EXE_PS "`which ps`"
+_ACEOF
+
+
 # Extract the first word of "dumpkeys", so it can be a program name with args.
 set dummy dumpkeys; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -3500,10 +3557,16 @@ fi
 
 
 if test x"$FOUND_DUMPKEYS" = xno ; then
-	as_fn_error "Required program dumpkeys is missing." "$LINENO" 5
+	as_fn_error "Required program 'dumpkeys' is missing." "$LINENO" 5
 fi
 
+cat >>confdefs.h <<_ACEOF
+#define EXE_DUMPKEYS "`which dumpkeys`"
+_ACEOF
+
+
 # Checks for files
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for /dev/input" >&5
 $as_echo_n "checking for /dev/input... " >&6; }
 if test "${ac_cv_file__dev_input+set}" = set; then :
@@ -3550,6 +3613,7 @@ fi
 
 
 # Checks for header files.
+
 
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -3964,6 +4028,7 @@ done
 
 
 # Checks for typedefs, structures, and compiler characteristics.
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for stdbool.h that conforms to C99" >&5
 $as_echo_n "checking for stdbool.h that conforms to C99... " >&6; }
 if test "${ac_cv_header_stdbool_h+set}" = set; then :
@@ -4140,6 +4205,7 @@ fi
 
 
 # Checks for library functions.
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for error_at_line" >&5
 $as_echo_n "checking for error_at_line... " >&6; }
 if test "${ac_cv_lib_error_at_line+set}" = set; then :
@@ -4389,7 +4455,7 @@ $as_echo "#define HAVE_WORKING_FORK 1" >>confdefs.h
 
 fi
 
-for ac_func in geteuid error error_at_line exit on_exit memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid getuid getgid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setegid seteuid strftime localtime fflush read time fgetws wcslen swscanf wcscpy
+for ac_func in geteuid error error_at_line exit on_exit memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid getuid getgid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setegid seteuid strftime localtime fflush read time fgetws wcslen swscanf wcscpy popen pclose
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_cxx_check_func "$LINENO" "$ac_func" "$as_ac_var"

@@ -1,5 +1,14 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Holds path to dumpkeys executable */
+#undef EXE_DUMPKEYS
+
+/* Holds path to grep executable */
+#undef EXE_GREP
+
+/* Holds path to ps executable */
+#undef EXE_PS
+
 /* Define to 1 if you have the `atoi' function. */
 #undef HAVE_ATOI
 
@@ -113,6 +122,12 @@
 
 /* Define to 1 if you have the `open' function. */
 #undef HAVE_OPEN
+
+/* Define to 1 if you have the `pclose' function. */
+#undef HAVE_PCLOSE
+
+/* Define to 1 if you have the `popen' function. */
+#undef HAVE_POPEN
 
 /* Define to 1 if you have the `read' function. */
 #undef HAVE_READ

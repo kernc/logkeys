@@ -30,6 +30,23 @@
 # define PACKAGE_VERSION "0.1.0"  // if PACKAGE_VERSION wasn't defined in <config.h>
 #endif
 
+// following EXE_* macros should be defined in config.h; if not, default
+#ifndef  EXE_PS
+# define EXE_PS "/bin/ps"
+#endif
+
+#ifndef  EXE_GREP
+# define EXE_GREP "/bin/grep"
+#endif
+
+#ifndef  EXE_DUMPKEYS
+# define EXE_DUMPKEYS "/usr/bin/dumpkeys"
+#endif
+
+#define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
+#define COMMAND_STR_DEVICES  ( EXE_GREP " Name /proc/bus/input/devices | " EXE_GREP " -nE '[Kk]eyboard|kbd'" )
+#define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
+
 #define INPUT_EVENT_PATH "/dev/input/"
 #define DEFAULT_LOG_FILE "/var/log/logkeys.log"
 #define PID_FILE         "/var/run/logkeys.pid"
@@ -146,8 +163,7 @@ void kill_existing_process()
   }
   
   if (!via_file) {  // if reading PID from temp_file failed, try ps-grep pipe
-    const char *pipe_cmd = (std::string("ps ax | grep '") + program_invocation_name + "' | grep -v grep").c_str();
-    via_pipe &= (sscanf(execute(pipe_cmd).c_str(), "%d", &pid) == 1);
+    via_pipe &= (sscanf(execute(COMMAND_STR_GET_PID).c_str(), "%d", &pid) == 1);
     via_pipe &= (pid != getpid());
   }
   
@@ -178,7 +194,7 @@ void determine_system_keymap()
   
   // get keymap from dumpkeys
   // if one knows of a better, more portable way to get wchar_t-s from symbolic keysym-s from `dumpkeys` or `xmodmap` or another, PLEASE LET ME KNOW! kthx
-  std::stringstream ss, dump(execute("dumpkeys -n | grep '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'"));  // see example output after i.e. `loadkeys slovene`
+  std::stringstream ss, dump(execute(COMMAND_STR_DUMPKEYS));  // see example output after i.e. `loadkeys slovene`
   std::string line;
 
   unsigned int i = 0;   // keycode
@@ -335,7 +351,7 @@ void export_keymap_to_file()
 void determine_input_device()
 {
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  std::string output = execute("grep Name /proc/bus/input/devices | grep -nE '[Kk]eyboard|kbd'");
+  std::string output = execute(COMMAND_STR_DEVICES);
 
   std::stringstream input_dev_index;
   input_dev_index << INPUT_EVENT_PATH;
@@ -605,3 +621,4 @@ int main(int argc, char **argv)
 int main(int argc, char** argv) {
   logkeys::main(argc, argv);
 }
+
