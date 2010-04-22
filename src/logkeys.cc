@@ -242,6 +242,9 @@ int main(int argc, char **argv)
     memset(altgr_keys, '\0', sizeof(altgr_keys));
     
     stdin = freopen(args.keymap, "r", stdin);
+    if (stdin == NULL)
+      error(EXIT_FAILURE, errno, "Error opening input keymap '%s'", args.keymap);
+    
     unsigned int i = -1;
     unsigned int line_number = 0;
     char func_string[32];
