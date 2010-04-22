@@ -24,6 +24,9 @@
 /* Define to 1 if you have the <cstring> header file. */
 #undef HAVE_CSTRING
 
+/* Define to 1 if you have the <cwchar> header file. */
+#undef HAVE_CWCHAR
+
 /* Define to 1 if you have the `error' function. */
 #undef HAVE_ERROR
 
@@ -47,6 +50,9 @@
 
 /* Define to 1 if you have the `fgets' function. */
 #undef HAVE_FGETS
+
+/* Define to 1 if you have the `fgetws' function. */
+#undef HAVE_FGETWS
 
 /* Define to 1 if you have the `flock' function. */
 #undef HAVE_FLOCK
@@ -129,9 +135,6 @@
 /* Define to 1 if you have the `sigaction' function. */
 #undef HAVE_SIGACTION
 
-/* Define to 1 if you have the `sleep' function. */
-#undef HAVE_SLEEP
-
 /* Define to 1 if you have the `sscanf' function. */
 #undef HAVE_SSCANF
 
@@ -171,6 +174,9 @@
 /* Define to 1 if you have the `strncat' function. */
 #undef HAVE_STRNCAT
 
+/* Define to 1 if you have the `swscanf' function. */
+#undef HAVE_SWSCANF
+
 /* Define to 1 if you have the <sys/file.h> header file. */
 #undef HAVE_SYS_FILE_H
 
@@ -194,6 +200,12 @@
 
 /* Define to 1 if you have the <vfork.h> header file. */
 #undef HAVE_VFORK_H
+
+/* Define to 1 if you have the `wcscpy' function. */
+#undef HAVE_WCSCPY
+
+/* Define to 1 if you have the `wcslen' function. */
+#undef HAVE_WCSLEN
 
 /* Define to 1 if `fork' works. */
 #undef HAVE_WORKING_FORK

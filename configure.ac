@@ -41,7 +41,7 @@ AC_CHECK_FILE(
 
 # Checks for header files.
 AC_CHECK_HEADERS(
-  [cstdio cerrno cstring cassert sstream cstdlib csignal error.h unistd.h getopt.h sys/file.h sys/stat.h linux/input.h], 
+  [cstdio cerrno cwchar cstring cassert sstream cstdlib csignal error.h unistd.h getopt.h sys/file.h sys/stat.h linux/input.h], 
   [],
   [AC_MSG_ERROR([Expected header file is missing!])]
 )
@@ -56,7 +56,7 @@ AC_TYPE_SIZE_T
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
 AC_CHECK_FUNCS(
-  [geteuid error error_at_line exit on_exit memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid getuid getgid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setegid seteuid strftime localtime fflush read sleep time],
+  [geteuid error error_at_line exit on_exit memset setlocale strerror fprintf getopt_long fopen sscanf fscanf getpid getuid getgid fclose remove kill strlen strcat strcpy strncat freopen feof fgets atoi sigaction fork setsid open close flock write umask setegid seteuid strftime localtime fflush read time fgetws wcslen swscanf wcscpy],
   [],
   [AC_MSG_ERROR([Expected function is missing!])]
 )

@@ -4,17 +4,19 @@
 #include <cassert>
 #include <linux/input.h>
 
+namespace logkeys {
+
 // these are ordered default US keymap keys
 wchar_t char_keys[49] =  L"1234567890-=qwertyuiop[]asdfghjkl;'`\\zxcvbnm,./<";
 wchar_t shift_keys[49] = L"!@#$%^&*()_+QWERTYUIOP{}ASDFGHJKL:\"~|ZXCVBNM<>?>";
 wchar_t altgr_keys[49] = {0}; // old, US don't use AltGr key: L"\0@\0$\0\0{[]}\\\0qwertyuiop\0~asdfghjkl\0\0\0\0zxcvbnm\0\0\0|";  // \0 on no symbol; as obtained by `loadkeys us`
 // TODO: add altgr_shift_keys[]
 
-char func_keys[][8] = {
-  "<Esc>", "<BckSp>", "<Tab>", "<Enter>", "<LCtrl>", "<LShft>", "<RShft>", "<KP*>", "<LAlt>", " ", "<CpsLk>", "<F1>", "<F2>", "<F3>", "<F4>", "<F5>",
-  "<F6>", "<F7>", "<F8>", "<F9>", "<F10>", "<NumLk>", "<ScrLk>", "<KP7>", "<KP8>", "<KP9>", "<KP->", "<KP4>", "<KP5>", "<KP6>", "<KP+>", "<KP1>",
-  "<KP2>", "<KP3>", "<KP0>", "<KP.>", /*"<",*/ "<F11>", "<F12>", "<KPEnt>", "<RCtrl>", "<KP/>", "<PrtSc>", "<AltGr>", "<Break>" /*linefeed?*/, "<Home>", "<Up>", "<PgUp>", 
-  "<Left>", "<Right>", "<End>", "<Down>", "<PgDn>", "<Ins>", "<Del>", "<Pause>", "<LMeta>", "<RMeta>", "<Menu>"
+wchar_t func_keys[][8] = {
+  L"<Esc>", L"<BckSp>", L"<Tab>", L"<Enter>", L"<LCtrl>", L"<LShft>", L"<RShft>", L"<KP*>", L"<LAlt>", L" L", L"<CpsLk>", L"<F1>", L"<F2>", L"<F3>", L"<F4>", L"<F5>",
+  L"<F6>", L"<F7>", L"<F8>", L"<F9>", L"<F10>", L"<NumLk>", L"<ScrLk>", L"<KP7>", L"<KP8>", L"<KP9>", L"<KP->", L"<KP4>", L"<KP5>", L"<KP6>", L"<KP+>", L"<KP1>",
+  L"<KP2>", L"<KP3>", L"<KP0>", L"<KP.>", /*"<",*/ L"<F11>", L"<F12>", L"<KPEnt>", L"<RCtrl>", L"<KP/>", L"<PrtSc>", L"<AltGr>", L"<Break>" /*linefeed?*/, L"<Home>", L"<Up>", L"<PgUp>", 
+  L"<Left>", L"<Right>", L"<End>", L"<Down>", L"<PgDn>", L"<Ins>", L"<Del>", L"<Pause>", L"<LMeta>", L"<RMeta>", L"<Menu>"
 };
 
 const char char_or_func[] =  // c = character key, f = function key, _ = blank/error ('_' is used, don't change); all according to KEY_* defines from <linux/input.h>
@@ -86,5 +88,7 @@ inline int to_func_keys_index(unsigned int keycode)
   
   return -1;  // not function key keycode
 }
+
+} // namespace logkeys
 
 #endif

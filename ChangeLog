@@ -1,5 +1,6 @@
 v0.1.1 (?)
-  * bug fixes
+  * fixed 100% CPU issue on x64
+  * various other bug fixes
   * removed pgrep dependency
   * PID file now in /var/run/
   * symlink attack vulnerability fixes
