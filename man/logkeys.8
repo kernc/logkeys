@@ -1,15 +1,18 @@
-.TH logkeys 8 2009-12-13
+.TH logkeys 8 2010-05-25
 .SH NAME
 logkeys \- a GNU/Linux keylogger that works!
 .SH SYNOPSIS
-.B logkeys
-\fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR] [\fB--no-func-keys\fR]
+.B logkeys \fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR]
 .br
-.B logkeys
-\fB-k\fR
+           [\fB--no-func-keys\fR] [\fB--no-timestamps\fR] 
 .br
-.B logkeys
-[\fB--export-keymap=\fIkeymap\fR]
+           [\fB--post-size=\fISIZE\fR] [\fB--post-http=\fIURL\fR]
+.br
+.B logkeys \fB-k\fR
+.br
+.B logkeys [\fB--export-keymap=\fIkeymap\fR]
+
+
 .SH DESCRIPTION
 logkeys is a linux keylogger. It is no more advanced than other available linux
 keyloggers, notably \fBlkl\fR and \fBuberkey\fR, but is a bit newer, more up to date, it
@@ -27,14 +30,19 @@ Two helper \fBsetuid root\fR programs are shipped with logkeys. \fIllk\fR, which
 Because llk and llkk are installed setuid root, you can edit the two .sh scripts
 (mostly just logkeys-start.sh) to your preference, then issue logkeys via llk whenever 
 you have to run it covertly (e.g. when you don't want to su to root or type sudo password).
+
+
 .SH OPTIONS
 Non-optional arguments are required for short options too.
+
 .TP
 \fB-s\fR, \fB-\-start\fR
 Starts the keylogging daemon process.
+
 .TP
 \fB-k\fR, \fB-\-kill\fR
 Terminates the running logkeys process.
+
 .TP
 \fB-o\fR, \fB-\-output\fR=\fIlogfile\fR
 Set ouput log file to \fIlogfile\fR. If no \fB-o\fR option is provided, logkeys
@@ -42,6 +50,7 @@ appends to \fI/var/log/logkeys.log\fR file. If \fIlogfile\fR doesn't exist, logk
 creates the file with 600 permissions.
 .IP
 See also \fBLOGFILE FORMAT\fR section.
+
 .TP
 \fB-m\fR, \fB-\-keymap\fR=\fIkeymap\fR
 Use file \fIkeymap\fR as input keymap for processing pressed keys.
@@ -52,16 +61,19 @@ previously exported by \fB--export-keymap\fR.
 See also \fBKEYMAP FORMAT\fR section.
 .IP
 \fB-m\fR and \fB-u\fR option are mutually exclusive.
+
 .TP
 \fB-d\fR, \fB-\-device\fR=\fIdevice\fR
 Use \fIdevice\fR as keyboard input event device instead of \fI/dev/input/eventX\fR default.
 .IP
 You can determine the keyboard device to be used by examining \fI/proc/bus/input/devices\fR.
+
 .TP
 \fB-u\fR, \fB-\-us-keymap\fR
 This option makes logkeys interpret keys as on standard US keyboard.
 .IP
 \fB-u\fR and \fB-m\fR option are mutually exclusive.
+
 .TP
 \fB-\-export-keymap\fR=\fIkeymap\fR
 This option makes logkeys export dynamic keymap as obtained from \fIdumpkeys\fR(1)
@@ -75,6 +87,7 @@ as complete deficient entries. It is also advised that you use \fB-\-export-keym
 on a virtual terminal outside of X (\fI/dev/ttyX\fR).
 .IP
 See section \fBKEYMAP FORMAT\fR for exported keymap format.
+
 .TP
 \fB-\-no-func-keys\fR
 This option makes logkeys log all and only character key presses 
@@ -83,10 +96,42 @@ This option makes logkeys log all and only character key presses
 This option may be useful when correct \fIkeymap\fR can reliably be 
 expected (i.e. by providing it with \fB-m\fR option). Then only character keys are
 logged, influenced by Shift and AltGr modifiers.
+
+.TP
+\fB-\-no-timestamps\fR
+When this option is set, logkeys doesn't prepend timestamp to each line of log file.
+Timestamps are only logged when logkeys starts and stops.
+
+.TP
+\fB-\-post-size=\fISIZE\fR
+When log size reaches \fISIZE\fR, the current log filename is appended \fI.X\fR, 
+where X is ascending number (e.g. \fIlogfile.1\fR).
+.IP
+When that happens, logkeys starts remote uploading process and all \fIlogfile.X\fR
+files are uploaded as specified by \fB--post-http\fR or \fB--post-irc\fR options.
+.IP
+If \fB--post-size\fR is set, but no post method is set (i.e. neither \fB--post-http\fR
+nor \fB--post-irc\fR), then the logfile is only truncated when it reaches 
+\fISIZE\fR, renamed to \fIlogfile.X\fR, and a new blank logfile is created for 
+active logging.
+.IP
+\fISIZE\fR can be an integer bytesize, or an intger followed by K or M for kilobytes 
+or megabytes, respectively.
+
+.TP
+\fB-\-post-http=\fIURL\fR
+This option tells logkeys to POST the log file to URL, where it is preferrably greeted 
+by a (PHP) script.
+.IP
+The file is sent with header \fIContent-Type: multipart/form-data\fR as file, so it
+is accessible in PHP via $_FILES variable.
+
 .SH FILES
 .TP
 \fB/var/log/logkeys.log\fR
 When \fB-o\fR option is not used, logkeys appends to default log file.
+
+
 .SH "LOGFILE FORMAT"
 Log files are \fBUTF-8 encoded\fR.
 .PP
@@ -149,6 +194,8 @@ Logging stopped at 2009-12-11 09:58:54+0100
 .PP
 Even when \fB-\-no-func-keys\fR is in effect, Space and Tab key presses are logged as
 a single space character.
+
+
 .SH "KEYMAP FORMAT"
 The keymap file is expected to be \fBUTF-8 encoded\fR.
 .PP
@@ -188,6 +235,8 @@ left-to-right.
 .PP
 If you create full and completely valid keymap for your particular language,
 please upload it to project website or send it to me by e-mail. Thanks.
+
+
 .SH EXAMPLES
 To print short help:
 .IP
@@ -211,8 +260,6 @@ $ logkeys --start --keymap my_keymap
 .PP
 To use a custom event device (e.g. /dev/input/event4):
 .IP
-$ logkeys --start --device /dev/input/event4  # or just
-.br
 $ logkeys --start --device event4
 .PP
 To end running logkeys process:
@@ -221,6 +268,8 @@ $ logkeys --kill
 .PP
 After \fIetc/logkeys-start.sh\fR is updated to one's liking, helper programs \fIbin/llk\fR (start) and 
 \fIbin/llkk\fR (kill) can be used as well.
+
+
 .SH BUGS
 logkeys relies on numeric output of \fIdumpkeys\fR(1), which \fIkeymaps\fR(5)
 manual page specifically discourages as unportable.
@@ -229,10 +278,10 @@ Be nice and hope nothing breaks.
 .PP
 If you come across any bugs, please report them on project website, issues page:
 .IP
-http://code.google.com/p/logkeys/issues
+http://code.google.com/p/logkeys/issues/
 .SH AUTHOR
 .PP
-logkeys was written by Kernc <kerncece+logkeys@gmail.com>.
+logkeys was written by Kernc <kerncece+logkeys@gmail.com> with much help from the community.
 .PP
 You can always obtain the latest version and information at project website:
 <http://code.google.com/p/logkeys/>.

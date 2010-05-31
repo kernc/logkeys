@@ -1,6 +1,8 @@
 
--> Add support for sending logs via mail or POSTing them to remote server.
+-> Add support for sending logs via mail or POSTing them to remote server
 
 -> Also log title of the focused window
 
--> Add support for mouse events (i.e. on mouse click the focus may have changed).
+-> Extract clipboard contents
+
+-> Add support for mouse events (i.e. on mouse click the focus may have changed)

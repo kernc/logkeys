@@ -1,5 +1,13 @@
-#ifndef _DEFAULT_KEYS_H_
-#define _DEFAULT_KEYS_H_
+/*
+  Copyleft (ɔ) 2009 Kernc
+  This program is free software. It comes with absolutely no warranty whatsoever.
+  See COPYING for further information.
+  
+  Project homepage: http://code.google.com/p/logkeys/
+*/
+
+#ifndef _KEYTABLES_H_
+#define _KEYTABLES_H_
 
 #include <cassert>
 #include <linux/input.h>
@@ -13,7 +21,7 @@ wchar_t altgr_keys[49] = {0}; // old, US don't use AltGr key: L"\0@\0$\0\0{[]}\\
 // TODO: add altgr_shift_keys[] (http://en.wikipedia.org/wiki/AltGr_key#US_international)
 
 wchar_t func_keys[][8] = {
-  L"<Esc>", L"<BckSp>", L"<Tab>", L"<Enter>", L"<LCtrl>", L"<LShft>", L"<RShft>", L"<KP*>", L"<LAlt>", L" L", L"<CpsLk>", L"<F1>", L"<F2>", L"<F3>", L"<F4>", L"<F5>",
+  L"<Esc>", L"<BckSp>", L"<Tab>", L"<Enter>", L"<LCtrl>", L"<LShft>", L"<RShft>", L"<KP*>", L"<LAlt>", L" ", L"<CpsLk>", L"<F1>", L"<F2>", L"<F3>", L"<F4>", L"<F5>",
   L"<F6>", L"<F7>", L"<F8>", L"<F9>", L"<F10>", L"<NumLk>", L"<ScrLk>", L"<KP7>", L"<KP8>", L"<KP9>", L"<KP->", L"<KP4>", L"<KP5>", L"<KP6>", L"<KP+>", L"<KP1>",
   L"<KP2>", L"<KP3>", L"<KP0>", L"<KP.>", /*"<",*/ L"<F11>", L"<F12>", L"<KPEnt>", L"<RCtrl>", L"<KP/>", L"<PrtSc>", L"<AltGr>", L"<Break>" /*linefeed?*/, L"<Home>", L"<Up>", L"<PgUp>", 
   L"<Left>", L"<Right>", L"<End>", L"<Down>", L"<PgDn>", L"<Ins>", L"<Del>", L"<Pause>", L"<LMeta>", L"<RMeta>", L"<Menu>"
@@ -91,4 +99,4 @@ inline int to_func_keys_index(unsigned int keycode)
 
 } // namespace logkeys
 
-#endif
+#endif  // _KEYTABLES_H_

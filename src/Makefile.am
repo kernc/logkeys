@@ -6,8 +6,8 @@ llk_SOURCES = llk.cc
 llkk_SOURCES = llkk.cc
 
 install-exec-hook:
-	chown root\: $(bindir)/llk
-	chmod u+s $(bindir)/llk
-	chown root\: $(bindir)/llkk
-	chmod u+s $(bindir)/llkk
+	chown root\: $(DESTDIR)$(bindir)/llk
+	chmod u+s    $(DESTDIR)$(bindir)/llk
+	chown root\: $(DESTDIR)$(bindir)/llkk
+	chmod u+s    $(DESTDIR)$(bindir)/llkk
   
