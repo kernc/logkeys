@@ -1,5 +1,5 @@
 
--> Add support for sending logs via mail or POSTing them to remote server
+-> Add support for sending logs via mail
 
 -> Also log title of the focused window
 

@@ -5,9 +5,9 @@
 Provided your GNU/Linux distribution doesn't include logkeys package in its
 repositories, manual installation of logkeys from source is as easy as:
 
- $ tar xvzf logkeys-0.1.0.tar.gz   # to extract the logkeys archive
+ $ tar xvzf logkeys-0.1.1.tar.gz   # to extract the logkeys archive
  
- $ cd logkeys-0.1.0/build  # move to build directory to build there
+ $ cd logkeys-0.1.1/build  # move to build directory to build there
  $ ../configure            # invoke configure from parent directory
  $ make                    # make compiles what it needs to compile
  ( become superuser now )  # you need root to install in system dir
@@ -17,6 +17,6 @@ That's it.
 
 To ever uninstall logkeys, remove accompanying scripts and manuals, issue
 
- # make uninstall    # in the same logkeys-0.1.0/build dir from before
+ # make uninstall    # in the same logkeys-0.1.1/build dir from before
 
-See README file for usage instructions and notes.
+See README file for usage instructions, troubleshooting and other notes.
