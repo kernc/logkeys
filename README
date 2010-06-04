@@ -69,8 +69,8 @@ bin/llk runs etc/logkeys-start.sh, and bin/llkk runs etc/logkeys-kill.sh.
 
 You can use these two setuid root programs (llk and llkk) for starting and
 stopping the keylogger quickly and covertly. You can modify the .sh scripts as
-you like. As the programs are installed setuid, the root password need not be
-provided at runtime.
+you like. As the two programs are installed with setuid bit set, the root
+password need not be provided at their runtime.
 
 Default log file is /var/log/logkeys.log and is not readable by others.
 
@@ -121,19 +121,22 @@ Abuse the output of this software wisely.
  4. Troubleshooting
 ===============================================================================
 
-4.1 no output in the log file
+4.1 empty log file or 'Error opening input event device'
 -------------------------------------------------
 After you run logkeys successfully, if you open the log file and see only the
 'Logging started...' and 'Logging stopped...' tag without any keypress
 "contents," it is very likely that logkeys got your device id wrong.
 
-The solution is to determine the correct event device id, and the run 
+This may also apply if you get the following error:
+  Error opening input event device '/dev/input/event-1'
+
+The solution is to determine the correct event device id, and then run 
 logkeys with --device (-d) switch, specifying that device manually.
 
 The procedure for manually learning the device id to use is as follows:
 
-As root, for each device eventX in /dev/input/, where X is a number between 0
-and 31 inclusively, write:
+As root, for each existing device eventX in /dev/input/, where X is a number
+between 0 and 31 inclusively, write:
 
  $ cat /dev/input/eventX
 
@@ -142,10 +145,11 @@ to be used. If you don't see any output, press Ctrl+C and continue with the
 next device.
 
 If this happened to be your issue, *please* submit a bug report, attaching
-your /proc/bus/input/devices file, and specifying which was the correct id.
+your /proc/bus/input/devices file as well as and specifying which was the
+correct id.
 
 
-4.2 logkeys outputs wrong characters:
+4.2 logkeys outputs wrong characters
 -------------------------------------------------
 It is very likely that you will see only some characters recognized, without
 any hope for Shift and AltGr working even slightly correct, especially when
