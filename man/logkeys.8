@@ -2,11 +2,11 @@
 .SH NAME
 logkeys \- a GNU/Linux keylogger that works!
 .SH SYNOPSIS
-.B logkeys \fB-s\fR [\fB-m \fIkeymap\fR|\fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR]
+.B logkeys \fB-s\fR [\fB-m \fIkeymap\fR | \fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR]
 .br
            [\fB--no-func-keys\fR] [\fB--no-timestamps\fR] 
 .br
-           [\fB--post-size=\fISIZE\fR] [\fB--post-http=\fIURL\fR]
+           [\fB--post-http=\fIURL\fR] [\fB--post-size=\fISIZE\fR]
 .br
 .B logkeys \fB-k\fR
 .br
@@ -129,15 +129,22 @@ is accessible in PHP via $_FILES variable.
 .SH FILES
 .TP
 \fB/var/log/logkeys.log\fR
-When \fB-o\fR option is not used, logkeys appends to default log file.
+When \fB-o\fR option is not used, logkeys appends to this default log file.
+.TP
+\fBetc/logkeys-start.sh\fR
+Setuid root program \fIllk\fR runs this script. Edit the contents to suit your needs.
+.TP
+\fBetc/logkeys-stop.sh\fR
+Setuid root program \fIllkk\fR runs this script. Default value should work well.
 
 
 .SH "LOGFILE FORMAT"
 Log files are \fBUTF-8 encoded\fR.
 .PP
-Each logging session is enclosed in "Logging started..." and "Logging stopped at 
-<timestamp>" strings. Whenever Enter key (Return key) or Ctrl+C or Ctrl+D combination is pressed, 
-a timestamp is appended on a new line.
+Each logging session is enclosed in "Logging started... [<timestamp>]" and "Logging 
+stopped at <timestamp>" strings. Whenever Enter key (Return key) or Ctrl+C or Ctrl+D 
+combination is pressed, a timestamp is appended on a new line (provided 
+\fB--no-timestamps\fR is not in effect).
 .PP
 Timestamp format is "%F\ %T%z", which results in "YYYY-mm-dd HH:MM:SS+ZZZZ".
 Timestamp is separated from the logged keys by one '>' symbol.
@@ -147,13 +154,13 @@ function key presses are replaced with strings as obtained from \fIkeymap\fR fil
 as hardcoded when no \fIkeymap\fR file is provided.
 .PP
 If a key is pressed down long enough so it repeats, it is logged only once and then 
-"<#+DD>" is appended, which hints the key was repeated DD more times. The DD figure 
-is not to be relied on. DD is in decimal format.
+"<#+DD>" is appended, which hints the key was repeated DD more times. The DD decimal 
+figure is not to be relied on.
 .PP
 If a keypress results in keycode, which is not recognized (i.e. key not found on a standard US 
 or Intl 105-key keyboard), then the string "<E-XX>" is appended, where XX is the
 received keycode in hexadecimal format. All new "WWW", "E-Mail", "Volume+", "Media",
-"Help", etc. keys will result in this error string.
+"Help", etc. keys will result in such error strings.
 .PP
 Using US keyboard layout, one example log file could look like:
 .IP
@@ -200,8 +207,8 @@ a single space character.
 The keymap file is expected to be \fBUTF-8 encoded\fR.
 .PP
 Each line of file represents either one character key or one function key.
-The format specifies \fBat least two\fR and \fBup to three\fR space-delimited 
-characters on character key lines (first without modifiers, second with Shift in 
+The format specifies \fBat least one\fR and \fBup to three\fR space-delimited 
+characters on character key lines (first without modifiers, optional second with Shift in 
 action, optional third with AltGr in action), and up to \fB7 characters long\fR
 string on function key lines.
 .PP
@@ -230,7 +237,7 @@ belong to character keys.
 Line 57 is reserved for Space and it should always be ' '. Line 84 is reserved for
 the key just right to left Shift that is present on some international layouts.
 Other lines can be quite reliably determined by looking at one \fBexported keymap\fR.
-The keys generally follow the order of their appearance on keyboard, top-to-bottom 
+The keys generally follow the order of their appearance on the keyboard, top-to-bottom 
 left-to-right.
 .PP
 If you create full and completely valid keymap for your particular language,
