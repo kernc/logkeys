@@ -7,6 +7,8 @@ v0.1.1a (2010-05-31)
   * other security fixes
   * code refactoring
   * remote log uploading via HTTP
+  * lkl and lklk are now llk and llkk to avoid confusion
+  * llk and llkk are now programs that run logkeys-start.sh/-stop.sh scripts
   * bug fixes
   
 v0.1.0 (2010-01-05)

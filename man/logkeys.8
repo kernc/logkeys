@@ -110,10 +110,15 @@ where X is ascending number (e.g. \fIlogfile.1\fR).
 When that happens, logkeys starts remote uploading process and all \fIlogfile.X\fR
 files are uploaded as specified by \fB--post-http\fR or \fB--post-irc\fR options.
 .IP
-If \fB--post-size\fR is set, but no post method is set (i.e. neither \fB--post-http\fR
-nor \fB--post-irc\fR), then the logfile is only truncated when it reaches 
-\fISIZE\fR, renamed to \fIlogfile.X\fR, and a new blank logfile is created for 
-active logging.
+If \fB--post-size\fR is set, but no post method is set, then the logfile is only
+truncated when it reaches \fISIZE\fR, renamed to \fIlogfile.X\fR, and a new blank
+logfile is created for active logging.
+.IP
+If \fB--post-size\fR is not set, but post method is, then the default \fISIZE\fR of
+500 KB (500.000 B) is used.
+.IP
+If \fB--post-size\fR is not set, and neither is any post method, then logkeys appends
+to the single specified log file.
 .IP
 \fISIZE\fR can be an integer bytesize, or an intger followed by K or M for kilobytes 
 or megabytes, respectively.
