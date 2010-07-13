@@ -61,7 +61,7 @@
 
 namespace logkeys {
 
-// executes cmd and returns string ouput or "ERR" on pipe error
+// executes cmd and returns string ouput
 std::string execute(const char* cmd)
 {
     FILE* pipe = popen(cmd, "r");

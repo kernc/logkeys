@@ -25,12 +25,12 @@ struct arguments
   char * irc_port;     // if --post-irc effective, this holds the IRC port number
   off_t post_size;     // post log file to remote when of size post_size, --post-size switch
   int flags;           // holds the following option flags
-#define FLAG_EXPORT_KEYMAP    0b1  // export keymap obtained from dumpkeys, --export-keymap is used
-#define FLAG_NO_FUNC_KEYS    0b10  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
-#define FLAG_NO_TIMESTAMPS  0b100  // don't log timestamps, --no-timestamps switch
-#define FLAG_POST_HTTP     0b1000  // post log to remote HTTP server, --post-http switch
-#define FLAG_POST_IRC     0b10000  // post log to remote IRC server, --post-irc switch
-#define FLAG_POST_SIZE   0b100000  // post log to remote HTTP or IRC server when log of size optarg, --post-size
+#define FLAG_EXPORT_KEYMAP    0x1  // export keymap obtained from dumpkeys, --export-keymap is used
+#define FLAG_NO_FUNC_KEYS     0x2  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
+#define FLAG_NO_TIMESTAMPS    0x4  // don't log timestamps, --no-timestamps switch
+#define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
+#define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
+#define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
 } args = {0};  // default all args to 0x0
 
 
