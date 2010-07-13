@@ -90,10 +90,12 @@ void set_utf8_locale()
   // set locale to common UTF-8 for wchars to be recognized correctly
   if(setlocale(LC_CTYPE, "en_US.UTF-8") == NULL) { // if en_US.UTF-8 isn't available
     char *locale = setlocale(LC_CTYPE, "");  // try the locale that corresponds to the value of the associated environment variable LC_CTYPE
-    if (locale == NULL || 
-        strstr(locale, "UTF-8") == NULL || strstr(locale, "UTF8") == NULL ||
-        strstr(locale, "utf-8") == NULL || strstr(locale, "utf8") == NULL)
-      error(EXIT_FAILURE, 0, "LC_CTYPE locale must be of UTF-8 type");
+    if (locale != NULL && 
+        (strstr(locale, "UTF-8") != NULL || strstr(locale, "UTF8") != NULL ||
+         strstr(locale, "utf-8") != NULL || strstr(locale, "utf8") != NULL) )
+      ;  // if locale has "UTF-8" in its name, it is cool to do nothing
+    else
+      error(EXIT_FAILURE, 0, "LC_CTYPE locale must be of UTF-8 type, or you need en_US.UTF-8 availabe");
   }
 }
 
