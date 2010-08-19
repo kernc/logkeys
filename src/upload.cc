@@ -105,7 +105,7 @@ void start_remote_upload()
   --last_index;  // logfile.last_index is the last one
   
   // POST to remote HTTP server
-  if (args.http_url) {
+  if (!args.http_url.empty()) {
     
     std::string url = std::string(args.http_url);
     std::string port = "80";
@@ -162,16 +162,16 @@ void start_remote_upload()
       if (strncmp(read_socket(sockfd), "HTTP/1.1 200", 12) == 0)
         ++successful[i - 1];
       
-      if (successful[i - 1] && !args.irc_server) remove(filename.str().c_str());
+      if (successful[i - 1] && args.irc_server.empty()) remove(filename.str().c_str());
       
       close(sockfd);
     }
   }
   
   // post to remote IRC server
-  if (args.irc_server && !isKilled) {
+  if (!args.irc_server.empty() && !isKilled) {
     
-    sockfd = open_connection(args.irc_server, args.irc_port);
+    sockfd = open_connection(args.irc_server.c_str(), args.irc_port.c_str());
     if (sockfd == -1) { 
       remove(UPLOADER_PID_FILE);
       error(EXIT_FAILURE, errno, "Failed to connect to remote server(s)");
@@ -236,8 +236,8 @@ void start_remote_upload()
   }
   
   char successful_treshold = 0; // determine how many post methods were supposed to be used
-  if (args.http_url)   ++successful_treshold;
-  if (args.irc_server) ++successful_treshold;
+  if (!args.http_url.empty())   ++successful_treshold;
+  if (!args.irc_server.empty()) ++successful_treshold;
   
   // remove all successfully uploaded files...
   for (int i = 1, j = 1; i <= last_index; ++i) {

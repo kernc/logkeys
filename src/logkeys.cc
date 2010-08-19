@@ -239,9 +239,9 @@ void parse_input_keymap()
   memset(shift_keys, '\0', sizeof(shift_keys));
   memset(altgr_keys, '\0', sizeof(altgr_keys));
   
-  stdin = freopen(args.keymap, "r", stdin);
+  stdin = freopen(args.keymap.c_str(), "r", stdin);
   if (stdin == NULL)
-    error(EXIT_FAILURE, errno, "Error opening input keymap '%s'", args.keymap);
+    error(EXIT_FAILURE, errno, "Error opening input keymap '%s'", args.keymap.c_str());
   
   unsigned int i = -1;
   unsigned int line_number = 0;
@@ -256,28 +256,28 @@ void parse_input_keymap()
       ++line_number;
       if(fgetws(line, sizeof(line), stdin) == NULL) {
         if (feof(stdin)) break;
-        else error_at_line(EXIT_FAILURE, errno, args.keymap, line_number, "fgets() error");
+        else error_at_line(EXIT_FAILURE, errno, args.keymap.c_str(), line_number, "fgets() error");
       }
       // line at most 8 characters wide (func lines are "1234567\n", char lines are "1 2 3\n")
       if (wcslen(line) > 8) // TODO: replace 8*2 with 8 and wcslen()!
-        error_at_line(EXIT_FAILURE, 0, args.keymap, line_number, "Line too long!");
+        error_at_line(EXIT_FAILURE, 0, args.keymap.c_str(), line_number, "Line too long!");
       // terminate line before any \r or \n
       std::wstring::size_type last = std::wstring(line).find_last_not_of(L"\r\n");
       if (last == std::wstring::npos)
-        error_at_line(EXIT_FAILURE, 0, args.keymap, line_number, "No characters on line");
+        error_at_line(EXIT_FAILURE, 0, args.keymap.c_str(), line_number, "No characters on line");
       line[last + 1] = '\0';
     }
     
     if (is_char_key(i)) {
       unsigned int index = to_char_keys_index(i);
       if (swscanf(line, L"%lc %lc %lc", &char_keys[index], &shift_keys[index], &altgr_keys[index]) < 1) {
-        error_at_line(EXIT_FAILURE, 0, args.keymap, line_number, "Too few input characters on line");
+        error_at_line(EXIT_FAILURE, 0, args.keymap.c_str(), line_number, "Too few input characters on line");
       }
     }
     if (is_func_key(i)) {
       if (i == KEY_SPACE) continue;  // space causes empty string and trouble
       if (swscanf(line, L"%7ls", &func_string[0]) != 1)
-        error_at_line(EXIT_FAILURE, 0, args.keymap, line_number, "Invalid function key string");  // does this ever happen?
+        error_at_line(EXIT_FAILURE, 0, args.keymap.c_str(), line_number, "Invalid function key string");  // does this ever happen?
       wcscpy(func_keys[to_func_keys_index(i)], func_string);
     }
   } // while (!feof(stdin))
@@ -285,14 +285,14 @@ void parse_input_keymap()
   
   if (line_number < N_KEYS_DEFINED)
 #define QUOTE(x) #x  // quotes x so it can be used as (char*)
-    error(EXIT_FAILURE, 0, "Too few lines in input keymap '%s'; There should be " QUOTE(N_KEYS_DEFINED) " lines!", args.keymap);
+    error(EXIT_FAILURE, 0, "Too few lines in input keymap '%s'; There should be " QUOTE(N_KEYS_DEFINED) " lines!", args.keymap.c_str());
 }
 
 void export_keymap_to_file()
 {
-  int keymap_fd = open(args.keymap, O_CREAT | O_EXCL | O_WRONLY, 0644);
+  int keymap_fd = open(args.keymap.c_str(), O_CREAT | O_EXCL | O_WRONLY, 0644);
   if (keymap_fd == -1)
-    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.keymap);
+    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.keymap.c_str());
   char buffer[32];
   int buflen = 0;
   unsigned int index;
@@ -319,10 +319,10 @@ void export_keymap_to_file()
     
     if (is_used_key(i))
       if (write(keymap_fd, buffer, buflen) < buflen)
-        error(EXIT_FAILURE, errno, "Error writing to keymap file '%s'", args.keymap);
+        error(EXIT_FAILURE, errno, "Error writing to keymap file '%s'", args.keymap.c_str());
   }
   close(keymap_fd);
-  error(EXIT_SUCCESS, 0, "Success writing keymap to file '%s'", args.keymap);
+  error(EXIT_SUCCESS, 0, "Success writing keymap to file '%s'", args.keymap.c_str());
   exit(EXIT_SUCCESS);
 }
 
@@ -348,7 +348,7 @@ void determine_input_device()
   input_dev_index << "event";
   input_dev_index << index;  // the correct input event # is (output - 1)
 
-  args.device = const_cast<char*>(input_dev_index.str().c_str());  // const_cast safe because original isn't modified
+  args.device = input_dev_index.str();
   
   // now we reclaim those root privileges
   seteuid(0); setegid(0);
@@ -372,12 +372,12 @@ int main(int argc, char **argv)
   if (!args.start && !(args.flags & FLAG_EXPORT_KEYMAP)) { usage(); exit(EXIT_FAILURE); }
   
   // if posting remote and post_size not set, set post_size to default [500K bytes]
-  if (args.post_size == 0 && (args.http_url || args.irc_server)) {
+  if (args.post_size == 0 && (!args.http_url.empty() || !args.irc_server.empty())) {
     args.post_size = 500000;
   }
   
   // check for incompatible flags
-  if (args.keymap && (!(args.flags & FLAG_EXPORT_KEYMAP) && args.us_keymap)) {  // exporting uses args.keymap also
+  if (!args.keymap.empty() && (!(args.flags & FLAG_EXPORT_KEYMAP) && args.us_keymap)) {  // exporting uses args.keymap also
     
     error(EXIT_FAILURE, 0, "Incompatible flags '-m' and '-u'. See usage.");
   }
@@ -390,18 +390,17 @@ int main(int argc, char **argv)
     export_keymap_to_file();
     // = exit(0)
   }
-  else if (args.keymap)  // custom keymap in use
+  else if (!args.keymap.empty())  // custom keymap in use
     parse_input_keymap();
   else
     determine_system_keymap();
   
-  if (args.device == NULL) {  // no device given with -d switch
+  if (args.device.empty()) {  // no device given with -d switch
     determine_input_device();
   } 
   else {  // event device supplied as -d argument
-    std::string d(args.device);
-    std::string::size_type i = d.find_last_of('/');
-    args.device = const_cast<char*>((std::string(INPUT_EVENT_PATH) + d.substr(i == std::string::npos ? 0 : i + 1)).c_str());
+    std::string::size_type i = args.device.find_last_of('/');
+    args.device = (std::string(INPUT_EVENT_PATH) + args.device.substr(i == std::string::npos ? 0 : i + 1));
   }
   
   set_signal_handling();
@@ -415,22 +414,22 @@ int main(int argc, char **argv)
   close(STDIN_FILENO); close(STDOUT_FILENO);  // leave stderr open
   
   // open input device for reading
-  input_fd = open(args.device, O_RDONLY);
+  input_fd = open(args.device.c_str(), O_RDONLY);
   if (input_fd == -1) {
-    error(EXIT_FAILURE, errno, "Error opening input event device '%s'", args.device);
+    error(EXIT_FAILURE, errno, "Error opening input event device '%s'", args.device.c_str());
   }
   
   // if log file is other than default, then better seteuid() to the getuid() in order to ensure user can't write to where she shouldn't!
-  if (strcmp(args.logfile, DEFAULT_LOG_FILE) != 0) {
+  if (args.logfile == DEFAULT_LOG_FILE) {
     seteuid(getuid());
     setegid(getgid());
   }
   
   // open log file as stdout (if file doesn't exist, create it with safe 0600 permissions)
   umask(0177);
-  stdout = freopen(args.logfile, "a", stdout);
+  stdout = freopen(args.logfile.c_str(), "a", stdout);
   if (stdout == NULL)
-    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile);
+    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
   
   // now we need those privileges back in order to create system-wide PID_FILE
   seteuid(0); setegid(0);
@@ -449,7 +448,7 @@ int main(int argc, char **argv)
   int count_repeats = 0;  // count_repeats differs from the actual number of repeated characters!! only the OS knows how these two values are related (by respecting configured repeat speed and delay)
   
   struct stat st;
-  stat(args.logfile, &st);
+  stat(args.logfile.c_str(), &st);
   off_t file_size = st.st_size;  // log file is currently file_size bytes "big"
   int inc_size;  // is added to file_size in each iteration of keypress reading, adding number of bytes written to log file in that iteration
   
@@ -495,12 +494,12 @@ int main(int argc, char **argv)
         if (stat(ss.str().c_str(), &st) == -1) break;  // file .log.i doesn't yet exist
       }
       
-      if (rename(args.logfile, ss.str().c_str()) == -1)  // move current log file to indexed
+      if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
         error(EXIT_FAILURE, errno, "Error renaming logfile");
       
-      stdout = fopen(args.logfile, "a");  // open empty log file with the same name
+      stdout = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
       if (stdout == NULL)
-        error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile);
+        error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
       
       file_size = 0;  // new log file is now empty
       // TODO: write new timestamp
