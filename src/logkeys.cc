@@ -47,7 +47,7 @@
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
 #define COMMAND_STR_DEVICES    EXE_GREP " Name /proc/bus/input/devices | " EXE_GREP " -nE "
 #define COMMAND_STR_DEVICES1 ( COMMAND_STR_DEVICES "'[Kk]eyboard|kbd'" )
-#define COMMAND_STR_DEVICES2 ( COMMAND_STR_DEVICES "'HID'" )
+#define COMMAND_STR_DEVICES2 ( COMMAND_STR_DEVICES "'HID|Microsoft'" )
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
