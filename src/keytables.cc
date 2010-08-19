@@ -56,7 +56,7 @@ inline bool is_used_key(unsigned int code)
   return (char_or_func[code] != '_');
 }
 
-// translates character keycodes to continuous array indices
+// translates character keycodes to continuous array indexes
 inline int to_char_keys_index(unsigned int keycode)
 {
   if (keycode >= KEY_1 && keycode <= KEY_EQUAL)  // keycodes 2-13: US keyboard: 1, 2, ..., 0, -, =
@@ -73,7 +73,7 @@ inline int to_char_keys_index(unsigned int keycode)
   return -1;  // not character keycode
 }
 
-// translates function keys keycodes to continuous array indices
+// translates function keys keycodes to continuous array indexes
 inline int to_func_keys_index(unsigned int keycode)
 {
   if (keycode == KEY_ESC)  // 1

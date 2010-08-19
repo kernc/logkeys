@@ -377,23 +377,23 @@ int main(int argc, char **argv)
   }
   
   // check for incompatible flags
-  if (args.keymap && args.us_keymap) {
+  if (args.keymap && (!(args.flags & FLAG_EXPORT_KEYMAP) && args.us_keymap)) {  // exporting uses args.keymap also
+    
     error(EXIT_FAILURE, 0, "Incompatible flags '-m' and '-u'. See usage.");
   }
   
   set_utf8_locale();
   
-  if (args.start && args.keymap && !(args.flags & FLAG_EXPORT_KEYMAP)) {
-    // read keymap from file
-    parse_input_keymap();
-  }  
-  else if ((args.start && !args.us_keymap) || (args.flags & FLAG_EXPORT_KEYMAP)) {
-    // get keymap used by the system and optionally export it to file
-    determine_system_keymap();
-    
-    // export keymap if so requested
-    if ((args.flags & FLAG_EXPORT_KEYMAP)) export_keymap_to_file();
+  if (args.flags & FLAG_EXPORT_KEYMAP) {
+    if (!args.us_keymap) 
+      determine_system_keymap();
+    export_keymap_to_file();
+    // = exit(0)
   }
+  else if (args.keymap)  // custom keymap in use
+    parse_input_keymap();
+  else
+    determine_system_keymap();
   
   if (args.device == NULL) {  // no device given with -d switch
     determine_input_device();
