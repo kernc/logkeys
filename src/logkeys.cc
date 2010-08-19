@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cerrno>
 #include <cwchar>
+#include <vector>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -45,9 +46,7 @@
 #endif
 
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
-#define COMMAND_STR_DEVICES    EXE_GREP " Name /proc/bus/input/devices | " EXE_GREP " -nE "
-#define COMMAND_STR_DEVICES1 ( COMMAND_STR_DEVICES "'[Kk]eyboard|kbd'" )
-#define COMMAND_STR_DEVICES2 ( COMMAND_STR_DEVICES "'HID|Microsoft'" )
+#define COMMAND_STR_DEVICES  ( EXE_GREP " -E 'Name|Handlers' /proc/bus/input/devices" )
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
@@ -332,23 +331,54 @@ void determine_input_device()
   setegid(65534); seteuid(65534);
   
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  std::string output = execute(COMMAND_STR_DEVICES1);
+  std::stringstream output(execute(COMMAND_STR_DEVICES));
+  
+  std::vector<std::string> valid_device_names;
+  valid_device_names.push_back("keyboard");
+  valid_device_names.push_back("Keyboard");
+  valid_device_names.push_back("HID");
+  valid_device_names.push_back("Microsoft");
+  
+  std::vector<std::string> results;
+  
+  std::string line;
+  int index;
+  bool name_ok = false;
+  
+  while(std::getline(output, line)) {
+    if (line[0] == 'N') {  // N: Name="AT Translated Set 2 keyboard"
+      name_ok = false;
+      for (unsigned i = 0; i < valid_device_names.size(); ++i) {
+        if (line.find(valid_device_names[i]) != std::string::npos) {
+          name_ok = true;
+          break;
+        }
+      }
+    }
+    else if (name_ok && line[0] == 'H') {  // H: Handlers=kbd event4
+      std::string::size_type i = line.find("event");
+      if (i != std::string::npos) i += 5; // "event".size() == 5
+      if (i < line.size()) {
+        index = atoi(&line.c_str()[i]);
+        
+        if (index != -1) {
+          std::stringstream input_dev_path;
+          input_dev_path << INPUT_EVENT_PATH;
+          input_dev_path << "event";
+          input_dev_path << index;
 
-  int index = atoi(output.c_str()) - 1;
-  if (index == -1) {
-    output = execute(COMMAND_STR_DEVICES2);
-    index = atoi(output.c_str()) - 1;
+          results.push_back(input_dev_path.str());
+        }
+      }
+    }
   }
-  if (index == -1) {
+  
+  if (results.size() == 0) {
     error(0, 0, "Couldn't determine keyboard device. :/");
     error(EXIT_FAILURE, 0, "Please post contents of your /proc/bus/input/devices file as a new bug report. Thanks!");
   }
-  std::stringstream input_dev_index;
-  input_dev_index << INPUT_EVENT_PATH;
-  input_dev_index << "event";
-  input_dev_index << index;  // the correct input event # is (output - 1)
 
-  args.device = input_dev_index.str();
+  args.device = results[0];  // for now, use only the first found device
   
   // now we reclaim those root privileges
   seteuid(0); setegid(0);
