@@ -29,7 +29,7 @@
 #endif
 
 #ifndef  PACKAGE_VERSION
-# define PACKAGE_VERSION "0.1.0"  // if PACKAGE_VERSION wasn't defined in <config.h>
+# define PACKAGE_VERSION "0.1.2"  // if PACKAGE_VERSION wasn't defined in <config.h>
 #endif
 
 // the following path-to-executable macros should be defined in config.h;
