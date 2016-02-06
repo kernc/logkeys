@@ -332,7 +332,7 @@ void determine_input_device()
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
   // The compiler automatically concatenates these adjacent strings to a single string.
   const char* cmd = EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | "
-    EXE_GREP " -B1 'EV=120013' | "
+    EXE_GREP " -B1 'EV=12001[3Ff]' | "
     EXE_GREP " -Eo 'event[0-9]+' ";
   std::stringstream output(execute(cmd));
   
