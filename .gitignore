@@ -1,0 +1,11 @@
+# Ignore artifacts generated during configure.
+
+src/.deps/
+src/Makefile
+src/config.h
+src/config.status
+src/man/Makefile
+src/scripts/Makefile
+src/src/Makefile
+src/src/.deps
+src/stamp-h1
