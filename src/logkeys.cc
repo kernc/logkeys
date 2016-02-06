@@ -46,7 +46,6 @@
 #endif
 
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
-#define COMMAND_STR_DEVICES  ( EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | " EXE_GREP " -B1 'EV=120013' | " EXE_GREP " -Eo 'event[0-9]+' ")
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
@@ -331,7 +330,11 @@ void determine_input_device()
   setegid(65534); seteuid(65534);
   
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  std::stringstream output(execute(COMMAND_STR_DEVICES));
+  // The compiler automatically concatenates these adjacent strings to a single string.
+  const char* cmd = EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | "
+    EXE_GREP " -B1 'EV=120013' | "
+    EXE_GREP " -Eo 'event[0-9]+' ";
+  std::stringstream output(execute(cmd));
   
   std::vector<std::string> results;
   std::string line;
