@@ -3,7 +3,7 @@
   This program is free software. It comes with absolutely no warranty whatsoever.
   See COPYING for further information.
   
-  Project homepage: http://code.google.com/p/logkeys/
+  Project homepage: https://github.com/kernc/logkeys
 */
 
 #ifndef _UPLOAD_H_
@@ -146,7 +146,7 @@ void start_remote_upload()
       obuf << 
         "POST " << location << " HTTP/1.1\r\n"
         "Host: " << host << "\r\n"
-        "User-Agent: logkeys (http://code.google.com/p/logkeys/)\r\n"
+        "User-Agent: logkeys (https://github.com/kernc/logkeys)\r\n"
         "Accept: */*\r\n"
         "Content-Type: multipart/form-data; boundary=" << boundary.str() << "\r\n"
         "Content-Length: " << postdata.str().size() << "\r\n"
@@ -182,7 +182,7 @@ void start_remote_upload()
     srand(time(NULL));
     int random = rand() % 999999;  // random 6 digits will be part of IRC nickname
     std::stringstream obuf;
-    obuf << "USER lk" << random << " 8 * :http://code.google.com/p/logkeys\r\n"
+    obuf << "USER lk" << random << " 8 * :https://github.com/kernc/logkeys\r\n"
             "NICK lk" << random << "\r\n";
     if (args.irc_entity[0] == '#')  // if entity is a channel, add command to join it
       obuf << "JOIN " << args.irc_entity << "\r\n";

@@ -3,7 +3,7 @@
   This program is free software. It comes with absolutely no warranty whatsoever.
   See COPYING for further information.
   
-  Project homepage: http://code.google.com/p/logkeys/
+  Project homepage: https://github.com/kernc/logkeys
 */
 
 #ifndef _USAGE_H_
@@ -36,7 +36,7 @@ void usage()
 "          logkeys -k\n"
 "\n"
 "logkeys version: " PACKAGE_VERSION "\n"
-"logkeys homepage: <http://code.google.com/p/logkeys/>\n"
+"logkeys homepage: <https://github.com/kernc/logkeys/>\n"
   );
 }
 
