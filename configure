@@ -563,7 +563,7 @@ PACKAGE_TARNAME='logkeys'
 PACKAGE_VERSION='0.1.1b-svn'
 PACKAGE_STRING='logkeys 0.1.1b-svn'
 PACKAGE_BUGREPORT='kerncece+logkeys@gmail.com'
-PACKAGE_URL='http://code.google.com/p/logkeys/'
+PACKAGE_URL='https://github.com/kernc/logkeys/'
 
 ac_unique_file="src/logkeys.cc"
 # Factoring default headers for most tests.
@@ -1338,7 +1338,7 @@ Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
 
 Report bugs to <kerncece+logkeys@gmail.com>.
-logkeys home page: <http://code.google.com/p/logkeys/>.
+logkeys home page: <https://github.com/kernc/logkeys/>.
 _ACEOF
 ac_status=$?
 fi
@@ -5087,7 +5087,7 @@ Configuration commands:
 $config_commands
 
 Report bugs to <kerncece+logkeys@gmail.com>.
-logkeys home page: <http://code.google.com/p/logkeys/>."
+logkeys home page: <https://github.com/kernc/logkeys/>."
 
 _ACEOF
 cat >>$CONFIG_STATUS <<_ACEOF || ac_write_fail=1

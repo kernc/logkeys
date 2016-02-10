@@ -1,3 +1,6 @@
+-> Add automated testing scripts to verify behaviour and operation
+
+-> Clean up imported docs in "./docs", remove redundant docs
 
 -> Add support for sending logs via mail
 
