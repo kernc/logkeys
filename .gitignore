@@ -1,11 +1,9 @@
-# Ignore artifacts generated during configure.
+# Ignore autogen.sh generated artifacts
+Makefile.in
+aclocal.m4
+configure
+config.h.in
+autom4te.cache
 
-src/.deps/
-src/Makefile
-src/config.h
-src/config.status
-src/man/Makefile
-src/scripts/Makefile
-src/src/Makefile
-src/src/.deps
-src/stamp-h1
+# Devs should be configuring and building in the ./build directory
+build/

@@ -8,29 +8,10 @@ just seems to work. It relies on event interface of the Linux input subsystem.
 Once completely set, it logs all common character and function keys, while also
 being fully aware of Shift and AltGr key modifiers.
 
-
 Installation
 ------------
 
-Provided your GNU/Linux distribution doesn't include logkeys package
-in its repositories, manual installation of logkeys from source is as
-easy as cloning this repo or [downloading a zip of the
-source](https://github.com/kernc/logkeys/archive/master.zip),
-unzipping, and building:
-
-    $ unzip logkeys-master.zip
-    $ cd logkeys-master/build
-    $ ../configure
-    $ make
-    $ su               # get root to install in system
-    $ make install     # installs binaries, manuals and scripts
-
-To uninstall logkeys, remove accompanying scripts and manuals:
-
-    $ make uninstall    # in the same src dir
-
-A copy of these instructions is in the accompanying INSTALL file.
-
+See [INSTALL](./INSTALL) for installation/build notes.
 
 Usage how-to
 ------------
