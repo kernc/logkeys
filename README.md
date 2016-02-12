@@ -128,8 +128,8 @@ Further information
 
 Read the man page. Please read the whole man page. Thanks. :-)
 
-Refer to troubleshooting and FAQ sections in (the
-docs)[./docs/Documentation.md], for currently known issues, ways to
+Refer to troubleshooting and FAQ sections in [the
+docs](./docs/Documentation.md), for currently known issues, ways to
 resolve them, and any other information.
 
 Report any bugs and request reasonable features on the [issues

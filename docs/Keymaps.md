@@ -14,7 +14,15 @@ Be aware that using the keymap that matches your keyboard layout doesn't necessa
 
 ## Creating keymaps
 
-You can easily create keymaps for your layout by taking one example and then modifying it with the help of a keyboard layout tool (e.g., see the following [example layout tool from Microsoft](http://msdn.microsoft.com/en-us/goglobal/bb964651.aspx)).  If you create a keymap, please upload it as a [new issue](https://github.com/kernc/logkeys/issues).
+You can easily create keymaps for your layout by taking one example
+and then modifying it with the help of a keyboard layout tool (e.g.,
+see the following [example layout tool from
+Microsoft](http://msdn.microsoft.com/en-us/goglobal/bb964651.aspx)).
+If you create a keymap, please submit a Pull Request to the master
+branch of this repo (preferred), or upload it as a [new
+issue](https://github.com/kernc/logkeys/issues).  Please ensure the
+filename has name and locale, if appropriate (e.g., "de_CH.map" vs
+just "de.map").
 
 ## Format
 
