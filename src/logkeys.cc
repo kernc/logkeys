@@ -52,7 +52,7 @@
 
 // active window id, title, name
 #define COMMAND_STR_AWID    "xprop -root 32x '\\t$0' _NET_ACTIVE_WINDOW | cut -f 2"
-#define COMMAND_STR_AWTITLE "xprop -id $(" COMMAND_STR_AWID ") _NET_WM_NAME  | awk '{print $3}'"
+#define COMMAND_STR_AWTITLE "xprop -id $(" COMMAND_STR_AWID ") _NET_WM_NAME"
 #define COMMAND_STR_AWPNAME "xprop -id $(" COMMAND_STR_AWID ") WM_CLASS | awk '{print $4}' | sed 's:^.\\(.*\\).$:\\1:'"
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
