@@ -1,0 +1,29 @@
+sudo: required
+
+dist: trusty
+
+cache:
+    apt: true
+    ccache: true
+
+language: cpp
+
+compiler:
+  - clang
+  - gcc
+
+# kbd provides dumpkeys
+addons:
+    apt_packages:
+      - kbd
+
+install:
+  - ./autogen.sh
+  - cd build
+  - ../configure --prefix=$TRAVIS_BUILD_DIR
+  - make
+  - sudo make install
+
+script:
+  # Override Travis' default
+  - true
