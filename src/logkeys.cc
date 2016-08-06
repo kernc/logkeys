@@ -52,8 +52,6 @@
 
 // active window id, title, name
 #define COMMAND_STR_AWID    "xprop -root 32x '\\t$0' _NET_ACTIVE_WINDOW | cut -f 2"
-#define COMMAND_STR_AWTITLE "xprop -id $(" COMMAND_STR_AWID ") _NET_WM_NAME | cut -d '=' -f 2"
-#define COMMAND_STR_AWPNAME "xprop -id $(" COMMAND_STR_AWID ") WM_CLASS | awk '{print $4}' | sed 's:^.\\(.*\\).$:\\1:'"
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
@@ -77,8 +75,8 @@ std::string execute(const char* cmd)
     char buffer[128];
     std::string result = "";
     while(!feof(pipe))
-    	if(fgets(buffer, 128, pipe) != NULL)
-    		result += buffer;
+      if(fgets(buffer, 128, pipe) != NULL)
+        result += buffer;
     pclose(pipe);
     return result;
 }
@@ -533,11 +531,11 @@ int main(int argc, char **argv)
   
   fflush(out);
 
-  //// programinfo
+  // programinfo
   std::string window_id;
   std::string old_window_id;
-  std::string cur_process_name; 
-  std::string cur_window_name;
+  std::string process_name; 
+  std::string window_title;
   std::string program_info;
   bool program_changed = false;
   
@@ -560,15 +558,17 @@ int main(int argc, char **argv)
       continue;
     }
 
-    //// on processid change update program_info write '[process name] "process title" > '
-    //// on process title change (like firefox tabs) would be better. possibly more ressource intensive?
+    // on processid change, update window-title write '[process name] "window title" > '
     if (args.flags & FLAG_WINDOW_TITLE) {
       window_id = execute(COMMAND_STR_AWID);
       
+      //// really ugly!
       if (window_id.compare(old_window_id) != 0) {
-        cur_process_name = execute(COMMAND_STR_AWPNAME);
-        cur_window_name = execute(COMMAND_STR_AWTITLE);
-        program_info = "[" + cur_process_name.erase(cur_process_name.size() - 1) + "] " + cur_window_name.erase(cur_window_name.size() - 1) + " > "; // delete newline (why are newlines)
+        process_name = sprintf("xprop -id $(%s) 0s '\\t$1' WM_CLASS | cut -f2-", window_id.c_str());
+        window_title = sprintf("xprop -id $(%s) _NET_WM_NAME | cut -d'=' -f2-", window_id.c_str());
+        window_title = execute(window_title.c_str());
+        process_name = execute(process_name.c_str());
+        program_info = "[" + process_name.erase(process_name.size() - 1) + "] " + window_title.erase(window_title.size() - 1) + " > "; // delete newline (why are newlines)
         program_changed = true;
       }
     }
@@ -612,8 +612,6 @@ int main(int argc, char **argv)
       }
     }
 
-    ////possible conflict if key repeated and program changed???
-
     // on key repeat ; must check before on key press
     if (event.value == EV_REPEAT) {
       ++count_repeats;
@@ -630,7 +628,7 @@ int main(int argc, char **argv)
 
     // on key press
     if (event.value == EV_MAKE) {
-      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp and programinfo
+      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp and window-title
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER) {
         inc_size += newline(out, event, program_changed, program_info);
       }
@@ -661,7 +659,7 @@ int main(int argc, char **argv)
     }
 
     // update program id
-    if (args.flags & FLAG_PROGRAMINFO) { 
+    if (args.flags & FLAG_WINDOW_TITLE) { 
       old_window_id = window_id;
       program_changed = false;
     }
@@ -691,4 +689,3 @@ int main(int argc, char** argv)
 {
   return logkeys::main(argc, argv);
 }
-
