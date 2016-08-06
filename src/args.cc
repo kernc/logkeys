@@ -30,7 +30,7 @@ struct arguments
 #define FLAG_EXPORT_KEYMAP    0x1  // export keymap obtained from dumpkeys, --export-keymap is used
 #define FLAG_NO_FUNC_KEYS     0x2  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
 #define FLAG_NO_TIMESTAMPS    0x4  // don't log timestamps, --no-timestamps switch
-#define FLAG_PROGRAMINFO      0x8  // log program name and window title, --programinfo switch
+#define FLAG_WINDOW_TITLE     0x8  // log window name and title of program, --window-title switch
 #define FLAG_POST_HTTP        0x10  // post log to remote HTTP server, --post-http switch
 #define FLAG_POST_IRC         0x20  // post log to remote IRC server, --post-irc switch
 #define FLAG_POST_SIZE        0x40  // post log to remote HTTP or IRC server when log of size optarg, --post-size
@@ -52,7 +52,7 @@ void process_command_line_arguments(int argc, char **argv)
     {"export-keymap", required_argument, &flags, FLAG_EXPORT_KEYMAP},
     {"no-func-keys",  no_argument,       &flags, FLAG_NO_FUNC_KEYS},
     {"no-timestamps", no_argument,       &flags, FLAG_NO_TIMESTAMPS},
-    {"programinfo",   no_argument,       &flags, FLAG_PROGRAMINFO},
+    {"window-title",  no_argument,       &flags, FLAG_WINDOW_TITLE},
     {"post-http",     required_argument, &flags, FLAG_POST_HTTP},
     {"post-irc",      required_argument, &flags, FLAG_POST_IRC},
     {"post-size",     required_argument, &flags, FLAG_POST_SIZE},
