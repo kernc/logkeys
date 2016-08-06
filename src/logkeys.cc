@@ -562,7 +562,7 @@ int main(int argc, char **argv)
 
     //// on processid change update program_info write '[process name] "process title" > '
     //// on process title change (like firefox tabs) would be better. possibly more ressource intensive?
-    if (args.flags & FLAG_PROGRAMINFO) {
+    if (args.flags & FLAG_WINDOW_TITLE) {
       window_id = execute(COMMAND_STR_AWID);
       
       if (window_id.compare(old_window_id) != 0) {
