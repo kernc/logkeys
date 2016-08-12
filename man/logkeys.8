@@ -8,6 +8,8 @@ logkeys \- a GNU/Linux keylogger that works!
 .br
            [\fB--post-http=\fIURL\fR] [\fB--post-size=\fISIZE\fR]
 .br
+           [\fB--no-daemon\fR]
+.br
 .B logkeys \fB-k\fR
 .br
 .B logkeys [\fB--export-keymap=\fIkeymap\fR]
@@ -132,6 +134,11 @@ by a (PHP) script.
 .IP
 The file is sent with header \fIContent-Type: multipart/form-data\fR as file, so it
 is accessible in PHP via $_FILES['file'] variable.
+
+.TP
+\fB-\-no-daemon\fR
+When this option is set, logkeys runs in the foreground.
+Useful when printing output to stdout.
 
 .SH FILES
 .TP
