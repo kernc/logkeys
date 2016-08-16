@@ -393,6 +393,11 @@ int main(int argc, char **argv)
   if (!args.keymap.empty() && (!(args.flags & FLAG_EXPORT_KEYMAP) && args.us_keymap)) {  // exporting uses args.keymap also
     error(EXIT_FAILURE, 0, "Incompatible flags '-m' and '-u'. See usage.");
   }
+
+  // check for incompatible flags: if posting remote and output is set to stdout
+  if (args.post_size != 0 && ( args.logfile == "-" )) {
+    error(EXIT_FAILURE, 0, "Incompatible flags [--post-size | --post-http] and --output to stdout");
+  }
   
   set_utf8_locale();
   
@@ -423,7 +428,11 @@ int main(int argc, char **argv)
   int noclose = 1;  // don't close streams (stderr used)
   if (daemon(nochdir, noclose) == -1)  // become daemon
     error(EXIT_FAILURE, errno, "Failed to become daemon");
-  close(STDIN_FILENO); close(STDOUT_FILENO);  // leave stderr open
+  close(STDIN_FILENO);
+  // leave stderr open
+  if (args.logfile != "-") {
+    close(STDOUT_FILENO);
+  }
   
   // open input device for reading
   input_fd = open(args.device.c_str(), O_RDONLY);
@@ -439,7 +448,13 @@ int main(int argc, char **argv)
   
   // open log file (if file doesn't exist, create it with safe 0600 permissions)
   umask(0177);
-  FILE *out = fopen(args.logfile.c_str(), "a");
+  FILE *out = NULL;
+  if (args.logfile == "-") {
+    out = stdout;
+  }
+  else {
+    out = fopen(args.logfile.c_str(), "a");
+  }
   if (!out)
     error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
   

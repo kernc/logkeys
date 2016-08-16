@@ -19,7 +19,7 @@ void usage()
 "\n"
 "  -s, --start               start logging keypresses\n"
 "  -m, --keymap=FILE         use keymap FILE\n"
-"  -o, --output=FILE         log output to FILE [" DEFAULT_LOG_FILE "]\n"
+"  -o, --output=FILE         log output to FILE [" DEFAULT_LOG_FILE "] or standard output '-'\n"
 "  -u, --us-keymap           use en_US keymap instead of configured default\n"
 "  -k, --kill                kill running logkeys process\n"
 "  -d, --device=FILE         input event device [eventX from " INPUT_EVENT_PATH "]\n"
