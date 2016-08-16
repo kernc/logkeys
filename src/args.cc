@@ -30,9 +30,10 @@ struct arguments
 #define FLAG_EXPORT_KEYMAP    0x1  // export keymap obtained from dumpkeys, --export-keymap is used
 #define FLAG_NO_FUNC_KEYS     0x2  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
 #define FLAG_NO_TIMESTAMPS    0x4  // don't log timestamps, --no-timestamps switch
-#define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
-#define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
-#define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
+#define FLAG_WINDOW_TITLE     0x8  // log window name and title of program, --window-title switch
+#define FLAG_POST_HTTP        0x10  // post log to remote HTTP server, --post-http switch
+#define FLAG_POST_IRC         0x20  // post log to remote IRC server, --post-irc switch
+#define FLAG_POST_SIZE        0x40  // post log to remote HTTP or IRC server when log of size optarg, --post-size
 } args = {0};  // default all args to 0x0 or ""
 
 
@@ -51,6 +52,7 @@ void process_command_line_arguments(int argc, char **argv)
     {"export-keymap", required_argument, &flags, FLAG_EXPORT_KEYMAP},
     {"no-func-keys",  no_argument,       &flags, FLAG_NO_FUNC_KEYS},
     {"no-timestamps", no_argument,       &flags, FLAG_NO_TIMESTAMPS},
+    {"window-title",  no_argument,       &flags, FLAG_WINDOW_TITLE},
     {"post-http",     required_argument, &flags, FLAG_POST_HTTP},
     {"post-irc",      required_argument, &flags, FLAG_POST_IRC},
     {"post-size",     required_argument, &flags, FLAG_POST_SIZE},
@@ -59,7 +61,7 @@ void process_command_line_arguments(int argc, char **argv)
   
   char c;
   int option_index;
-  
+
   while ((c = getopt_long(argc, argv, "sm:o:ukd:?", long_options, &option_index)) != -1)
   {
     switch (c) 
@@ -71,8 +73,9 @@ void process_command_line_arguments(int argc, char **argv)
       case 'k': args.kill = true;      break;
       case 'd': args.device = optarg;  break;
       
-      case  0 : 
+      case  0 :
         args.flags |= flags;
+
         switch (flags) 
         {
           case FLAG_EXPORT_KEYMAP: args.keymap = optarg; break;
@@ -111,7 +114,7 @@ void process_command_line_arguments(int argc, char **argv)
       default : usage(); exit(EXIT_FAILURE);
     }
   } // while
-  
+
   while(optind < argc)
     error(0, 0, "Non-option argument %s", argv[optind++]);
 }

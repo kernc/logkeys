@@ -27,6 +27,7 @@ void usage()
 "      --export-keymap=FILE  export configured keymap to FILE and exit\n"
 "      --no-func-keys        log only character keys\n"
 "      --no-timestamps       don't prepend timestamps to log file lines\n"
+"      --window-title        add active program window name and window title to log file\n"
 "      --post-http=URL       POST log to URL as multipart/form-data file\n"
 //"      --post-irc=FORMAT     FORMAT is nick_or_channel@server:port\n"
 "      --post-size=SIZE      post log file when size equals SIZE [500k]\n"
