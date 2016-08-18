@@ -30,6 +30,7 @@ void usage()
 "      --post-http=URL       POST log to URL as multipart/form-data file\n"
 //"      --post-irc=FORMAT     FORMAT is nick_or_channel@server:port\n"
 "      --post-size=SIZE      post log file when size equals SIZE [500k]\n"
+"      --no-daemon           run in foreground\n"
 "\n"
 "Examples: logkeys -s -m mylang.map -o ~/.secret-keys.log\n"
 "          logkeys -s -d event6\n"

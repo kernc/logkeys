@@ -33,6 +33,7 @@ struct arguments
 #define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
 #define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
 #define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
+#define FLAG_NO_DAEMON       0x40  // don't daemonize process, stay in foreground, --no-daemon switch
 } args = {0};  // default all args to 0x0 or ""
 
 
@@ -54,6 +55,7 @@ void process_command_line_arguments(int argc, char **argv)
     {"post-http",     required_argument, &flags, FLAG_POST_HTTP},
     {"post-irc",      required_argument, &flags, FLAG_POST_IRC},
     {"post-size",     required_argument, &flags, FLAG_POST_SIZE},
+    {"no-daemon",     no_argument,       &flags, FLAG_NO_DAEMON},
     {0}
   };
   
