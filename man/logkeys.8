@@ -103,6 +103,11 @@ When this option is set, logkeys doesn't prepend timestamp to each line of log f
 Timestamps are only logged when logkeys starts and stops.
 
 .TP
+\fB-\-windowtitle\fR
+When this option is set, logkeys will log the program name and window title of 
+the active X window on a new line. 
+
+.TP
 \fB-\-post-size=\fISIZE\fR
 When log size reaches \fISIZE\fR, the current log filename is appended \fI.X\fR, 
 where X is ascending number (e.g. \fIlogfile.1\fR).
@@ -153,6 +158,12 @@ combination is pressed, a timestamp is appended on a new line (provided
 .PP
 Timestamp format is "%F\ %T%z", which results in "YYYY-mm-dd HH:MM:SS+ZZZZ".
 Timestamp is separated from the logged keys by one '>' symbol.
+.PP
+When \fB-\-window-title\fR is in effect the program name and the window title of the 
+active X window will be inserted between the timestamp and a final '>' symbol. The
+maximum length of both the program-name and window-name strings is 150 characters.
+The Enter key will NOT trigger the logging of window information.
+The format is: ["Program-name"] "Window title" >
 .PP
 All character key presses are logged as they appear. All 
 function key presses are replaced with strings as obtained from \fIkeymap\fR file, or
@@ -206,6 +217,21 @@ Logging stopped at 2009-12-11 09:58:54+0100
 .PP
 Even when \fB-\-no-func-keys\fR is in effect, Space and Tab key presses are logged as
 a single space character.
+.PP
+If the same log was obtained by a logkeys process invoked with \fB-\-no-window-title\fR
+option, it would look like:
+.IP
+Logging started ...
+.IP
+2009-12-11 09:58:19+0100 > ["Gnome-terminal"] "logkeys@linux-server:~" > make
+.br
+2009-12-11 09:58:20+0100 > make install<LAlt><Tab>
+.br
+2009-12-11 09:58:30+0100 > ["Firefox"]  "New Tab - Mozilla Firefox" > <LCtrl>tgoogle.com
+.br
+2009-12-11 09:58:39+0100 > logkeys github
+.IP
+Logging stopped at 2009-12-11 09:58:54+0100
 
 
 .SH "KEYMAP FORMAT"
