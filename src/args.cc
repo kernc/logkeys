@@ -59,7 +59,7 @@ void process_command_line_arguments(int argc, char **argv)
     {0}
   };
   
-  char c;
+  int c;
   int option_index;
   
   while ((c = getopt_long(argc, argv, "sm:o:ukd:?", long_options, &option_index)) != -1)
