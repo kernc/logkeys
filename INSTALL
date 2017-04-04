@@ -10,10 +10,16 @@ unzipping, configuring, and building.
 Prerequisites
 -------------
 
-You need autotools to build the code from source:
+You need some tools to build the code from source:
 
+    # On Debian-based distros
     apt-get update
     apt-get install -y autotools
+    
+    # On openSUSE
+    zypper install automake
+    zypper install gcc-c++
+    
 
 Build and Install
 -----------------
