@@ -15,7 +15,7 @@ You need autotools to build the code from source:
     apt-get update
     apt-get install -y autotools
     
-    For OpenSuse
+    For openSUSE
     ------------
     
     zypper install automake
