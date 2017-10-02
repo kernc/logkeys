@@ -75,13 +75,15 @@ std::string execute(const char* cmd)
 }
 
 std::vector<int> input_fds;
+bool reading = true;
 
 void signal_handler(int signal)
 {
   for(int i = 0; i < input_fds.size(); i++){
-    close(input_fds[i]);  // closing input file will break the infinite while loop
+    close(input_fds[i]);  // closing input files safely
   } 
-  exit(0);
+  reading = false; // End while loop
+  
 }
 
 void set_utf8_locale()
@@ -503,8 +505,8 @@ int main(int argc, char **argv)
     }
   }
   
-  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
-  while (1) {
+  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fds)
+  while (reading) {
     int x = select(maxfd+1, &read_fds, NULL, NULL, NULL);
     for(unsigned long i = 0; i < input_fds.size() && x > 0; i++){
       int input_fd = input_fds[i];
