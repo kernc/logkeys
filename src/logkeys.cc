@@ -372,12 +372,12 @@ int main(int argc, char **argv)
 {  
   on_exit(exit_cleanup, NULL);
   
-  if (geteuid()) error(EXIT_FAILURE, errno, "Got r00t?");
 
   args.logfile = (char*) DEFAULT_LOG_FILE;  // default log file will be used if none specified
   
   process_command_line_arguments(argc, argv);
   
+  if (geteuid()) error(EXIT_FAILURE, errno, "Got r00t?");
   // kill existing logkeys process
   if (args.kill) kill_existing_process();
   
