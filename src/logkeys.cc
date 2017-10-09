@@ -19,6 +19,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <wctype.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -606,16 +607,16 @@ int main(int argc, char **argv)
               wch = char_keys[to_char_keys_index(scan_code)];
           }
         } 
-        else if (capslock_in_effect) {
-          if (shift_in_effect) // if capslock and shift both on, leave it alone
-            wch = char_keys[to_char_keys_index(scan_code)];
-          else if (! isalpha (char_keys[to_char_keys_index(scan_code)])) // if not a letter, leave it alone
+
+        else if (capslock_in_effect && iswalpha(char_keys[to_char_keys_index(scan_code)])) { // only bother with capslock if alpha
+          if (shift_in_effect) // capslock and shift cancel each other
             wch = char_keys[to_char_keys_index(scan_code)];
           else
             wch = shift_keys[to_char_keys_index(scan_code)];
           if (wch == L'\0')
             wch = char_keys[to_char_keys_index(scan_code)];
         }
+        
         else if (shift_in_effect) {
           wch = shift_keys[to_char_keys_index(scan_code)];
           if (wch == L'\0')
