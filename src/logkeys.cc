@@ -584,12 +584,8 @@ int main(int argc, char **argv)
         continue;  // but don't log "<Enter>"
       }
       
-      if (scan_code == KEY_CAPSLOCK) {
-        if (capslock_in_effect)
-          capslock_in_effect = false;
-        else
-          capslock_in_effect = true;
-      }
+      if (scan_code == KEY_CAPSLOCK)
+        capslock_in_effect = !capslock_in_effect;
 
       if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
         shift_in_effect = true;
@@ -611,7 +607,9 @@ int main(int argc, char **argv)
           }
         } 
         else if (capslock_in_effect) {
-          if (shift_in_effect) // capslock and shift cancel each other out
+          if (shift_in_effect) // if capslock and shift both on, leave it alone
+            wch = char_keys[to_char_keys_index(scan_code)];
+          else if (! isalpha (char_keys[to_char_keys_index(scan_code)])) // if not a letter, leave it alone
             wch = char_keys[to_char_keys_index(scan_code)];
           else
             wch = shift_keys[to_char_keys_index(scan_code)];
