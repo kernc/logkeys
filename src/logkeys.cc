@@ -116,7 +116,7 @@ void create_PID_file()
     close(pid_fd);
   }
   else {
-    if (errno == EEXIST)
+    if (errno == EEXIST)  // This should never happen
          error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
     else error(EXIT_FAILURE, errno, "Error opening PID file '" PID_FILE "'");
   }
@@ -424,14 +424,6 @@ int main(int argc, char **argv)
   
   set_signal_handling();
   
-  if (!(args.flags & FLAG_NO_DAEMON)) {
-    int nochdir = 0;
-    if (args.logfile[0] != '/')
-         nochdir = 1;  // don't chdir (logfile specified with relative path)
-    int noclose = 1;  // don't close streams (stderr used)
-    if (daemon(nochdir, noclose) == -1)  // become daemon
-      error(EXIT_FAILURE, errno, "Failed to become daemon");
-  }
   close(STDIN_FILENO);
   // leave stderr open
   if (args.logfile != "-") {
@@ -461,7 +453,16 @@ int main(int argc, char **argv)
   }
   if (!out)
     error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
-  
+
+  if (access(PID_FILE, F_OK) != -1)  // PID file already exists
+    error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
+
+  if (!(args.flags & FLAG_NO_DAEMON)) {
+    int noclose = 1;  // don't close streams (stderr used)
+    if (daemon(0, noclose) == -1)  // become daemon
+      error(EXIT_FAILURE, errno, "Failed to become daemon");
+  }
+
   // now we need those privileges back in order to create system-wide PID_FILE
   seteuid(0); setegid(0);
   if (!(args.flags & FLAG_NO_DAEMON)) {
