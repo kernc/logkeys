@@ -20,6 +20,10 @@ You need some tools to build the code from source:
     zypper install automake
     zypper install gcc-c++
     
+    # on Fedora/Redhat/CentOS
+    dnf install automake
+    dnf install gcc make gcc-c++
+    
 
 Build and Install
 -----------------
