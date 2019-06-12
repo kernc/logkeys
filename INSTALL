@@ -32,9 +32,9 @@ Build and Install
     $ unzip logkeys-master.zip     # or use git clone
     $ cd logkeys-master
 
-    $ ./autogen.sh     # generate files for build
+    $ ./autogen.sh     # generate files for build use  ($ sudo ./autogen.sh) for Debian/Ubuntu
     $ cd build         # keeps the root and src dirs clean
-    $ ../configure
+    $ ../configure     # ($ sudo ../configure) for Debian/Ubuntu
 
     $ make
     $ su               # get root to install in system
