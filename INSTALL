@@ -13,8 +13,8 @@ Prerequisites
 You need some tools to build the code from source:
 
     # On Debian-based distros
-    apt-get update
-    apt-get install -y autotools
+    sudo apt-get update
+    sudo apt-get install autotools-dev autoconf
     
     # On openSUSE
     zypper install automake
