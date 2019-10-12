@@ -523,7 +523,8 @@ int log_event(FILE *out)
 
   // on key press
   if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
-      (key_state.ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D))) {
+      (key_state.ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D)) ||
+      args.timestamp_every) {
       // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
     if (key_state.ctrl_in_effect)
       inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
@@ -534,7 +535,7 @@ int log_event(FILE *out)
       inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
     }
   }
-  else if (is_char_key(scan_code)) {
+  if (is_char_key(scan_code)) {
     // print character or string corresponding to received keycode; only print chars when not \0
     if (key_state.key != L'\0') inc_size += fprintf(out, "%lc", key_state.key);  // write character to log file
   }
