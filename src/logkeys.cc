@@ -552,7 +552,7 @@ int main(int argc, char **argv)
       // on ENTER key or Ctrl+C/Ctrl+D event append timestamp
       if (scan_code == KEY_ENTER || scan_code == KEY_KPENTER ||
           (ctrl_in_effect && (scan_code == KEY_C || scan_code == KEY_D)) ||
-          args.every_key) {
+          args.timestamp_every) {
         if (ctrl_in_effect)
           inc_size += fprintf(out, "%lc", char_keys[to_char_keys_index(scan_code)]);  // log C or D
         if (args.flags & FLAG_NO_TIMESTAMPS)
@@ -562,7 +562,7 @@ int main(int argc, char **argv)
           inc_size += fprintf(out, "%s", timestamp);  // then newline and timestamp
         }
         if (inc_size > 0) file_size += inc_size;
-        if (!args.every_key) {
+        if (!args.timestamp_every) {
           continue;  // but don't log "<Enter>"
         }
       }

