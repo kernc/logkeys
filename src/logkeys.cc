@@ -701,8 +701,9 @@ int main(int argc, char **argv)
     error(EXIT_FAILURE, errno, "Another process already running? Quitting. (" PID_FILE ")");
 
   if (!(args.flags & FLAG_NO_DAEMON)) {
+    int nochdir = 1;  // don't change cwd to root (allow relative output file paths)
     int noclose = 1;  // don't close streams (stderr used)
-    if (daemon(0, noclose) == -1)  // become daemon
+    if (daemon(nochdir, noclose) == -1)  // become daemon
       error(EXIT_FAILURE, errno, "Failed to become daemon");
   }
 
