@@ -35,7 +35,7 @@ struct arguments
 #define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
 #define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
 #define FLAG_NO_DAEMON       0x40  // don't daemonize process, stay in foreground, --no-daemon switch
-#define FLAG_TIMESTAMP_EVERY 0x40  // log timestamps on every key, --timestamp-every switch
+#define FLAG_TIMESTAMP_EVERY 0x80  // log timestamps on every key, --timestamp-every switch
 } args = {0};  // default all args to 0x0 or ""
 
 
