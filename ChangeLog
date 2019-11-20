@@ -1,3 +1,31 @@
+v0.2.0 (2019-10-15)
+  * recognize Logitech k7570 keyboard
+  * recognize other Logitech keyboards
+  * updated documentation
+  * added Standard Polish, Swiss High German, French Canadian keymaps
+  * added 'us en' keymap for ubuntu 12.04
+  * added Czech keymap
+  * added option to print to stdout
+  * added --no-daemon switch for running in foreground
+  * log uppercase letters when CapsLock is on
+  * update Italian keymap
+  * added English Dvorak keymap
+  * update installation instructions
+  * added --timestamp-every flag to timestamp every key press
+
+v0.1.1c (2016-06-02)
+  * fix issue #60
+  * fix issue #42
+  * fix issue #45
+  * added a directory with all 19 existing keymap files
+
+v0.1.1b (2010-01-23)
+  * minor update to man file
+  * fix a bug with older g++
+  * fix "finding" UTF-8
+  * fix if conditions with --export-keymap switch
+  * improve device auto-detection
+
 v0.1.1a (2010-05-31)
   * fixed 100% CPU issue on x64
   * various other bug fixes
