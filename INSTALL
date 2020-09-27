@@ -3,8 +3,8 @@ logkeys keylogger - installation instructions
 
 Provided your GNU/Linux distribution doesn't include logkeys package
 in its repositories, manual installation of logkeys from source is as
-easy as cloning this repo or [downloading a zip of the
-source](https://github.com/kernc/logkeys/archive/master.zip),
+easy as cloning this repo or downloading a zip of the
+source (<https://github.com/kernc/logkeys/archive/master.zip>),
 unzipping, configuring, and building.
 
 Prerequisites
@@ -13,17 +13,17 @@ Prerequisites
 You need some tools to build the code from source:
 
     # On Debian-based distros
-    sudo apt-get update
-    sudo apt-get install autotools-dev autoconf
-    
+    apt install build-essential autotools-dev autoconf kbd
+
     # On openSUSE
-    zypper install automake
-    zypper install gcc-c++
-    
+    zypper install automake gcc-c++ kbd
+
     # on Fedora/Redhat/CentOS
-    dnf install automake
-    dnf install gcc make gcc-c++
-    
+    dnf install automake make gcc-c++ kbd
+
+    # on ArchLinux
+    pacman -S base-devel kbd
+
 
 Build and Install
 -----------------
