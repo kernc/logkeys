@@ -1,6 +1,8 @@
 logkeys - a GNU/Linux keylogger
 ===============================
 
+[![Build Status](https://img.shields.io/github/workflow/status/kernc/logkeys/CI?style=for-the-badge)](https://github.com/kernc/logkeys/actions)
+
 logkeys is a linux keylogger.  It is no more advanced than other available linux
 keyloggers, notably lkl and uberkey, but is a bit newer, more up to date, it
 doesn't unreliably repeat keys and it shouldn't crash your X. All in all, it
