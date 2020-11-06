@@ -1,0 +1,33 @@
+name: CI
+on:
+  push: { branches: [master] }
+  pull_request: { branches: [master] }
+  schedule: [ cron: '12 15 * * 6' ]  # Every Saturday, 15:12
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt install \
+            autogen autotools-dev \
+            kbd  # provides dumpkeys
+
+      - name: Build & Test
+        env:
+          CC: ${{ matrix.compiler }}
+        run: |
+          ./autogen.sh
+          cd build
+          ../configure --prefix=/usr/local
+          make
