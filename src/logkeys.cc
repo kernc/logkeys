@@ -402,7 +402,7 @@ void determine_input_device()
   }
 
   //Choose device with the best score
-  int max_device = std::max_element(devices.begin(), devices.end()) - devices.begin();
+  int max_device = std::max_element(scores.begin(), scores.end()) - scores.begin();
   args.device = devices[max_device];  // for now, use only the first found device
   
   // now we reclaim those root privileges
@@ -757,4 +757,3 @@ int main(int argc, char** argv)
 {
   return logkeys::main(argc, argv);
 }
-
