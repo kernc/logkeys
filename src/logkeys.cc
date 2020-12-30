@@ -6,6 +6,7 @@
   Project homepage: https://github.com/kernc/logkeys
 */
 
+#include <algorithm>
 #include <cstdio>
 #include <cerrno>
 #include <cwchar>
@@ -345,39 +346,67 @@ void determine_input_device()
   // better be safe than sory: while running other programs, switch user to nobody
   setegid(65534); seteuid(65534);
   
-  // extract input number from /proc/bus/input/devices (I don't know how to do it better. If you have an idea, please let me know.)
-  // The compiler automatically concatenates these adjacent strings to a single string.
-  const char* cmd = EXE_GREP " -E 'Handlers|EV=' /proc/bus/input/devices | "
-    EXE_GREP " -B1 'EV=1[02]001[3Ff]' | "
-    EXE_GREP " -Eo 'event[0-9]+' ";
+  //Look for devices with keybit bitmask that has keys a keyboard doeas
+  //If a bitmask ends with 'e', it supports KEY_2, KEY_1, KEY_ESC, and KEY_RESERVED is set to 0, so it's probably a keyboard
+  //keybit:   https://github.com/torvalds/linux/blob/02de58b24d2e1b2cf947d57205bd2221d897193c/include/linux/input.h#L45
+  //keycodes: https://github.com/torvalds/linux/blob/139711f033f636cc78b6aaf7363252241b9698ef/include/uapi/linux/input-event-codes.h#L75
+  //Take the Name, Handlers, and KEY values
+  const char* cmd = EXE_GREP " -B8 -E 'KEY=.*e$' /proc/bus/input/devices | "
+    EXE_GREP " -E 'Name|Handlers|KEY' ";
   std::stringstream output(execute(cmd));
   
-  std::vector<std::string> results;
+  std::vector<std::string> devices;
+  std::vector<unsigned short> scores;
   std::string line;
   
-  while(std::getline(output, line)) {
-    std::string::size_type i = line.find("event");
-    if (i != std::string::npos) i += 5; // "event".size() == 5
-    if (i < line.size()) {
-      int index = atoi(&line.c_str()[i]);
-      
-      if (index != -1) {
-        std::stringstream input_dev_path;
-        input_dev_path << INPUT_EVENT_PATH;
-        input_dev_path << "event";
-        input_dev_path << index;
+  unsigned short line_type = 0;
+  unsigned short score = 0;
 
-        results.push_back(input_dev_path.str());
+  while(std::getline(output, line)) {
+    transform(line.begin(), line.end(), line.begin(), ::tolower);
+ 
+    //Generate score based on device name
+    if(line_type == 0){
+      if (line.find("keyboard") != std::string::npos){
+        score += 100;
       }
     }
+    //Add the event handler
+    else if(line_type == 1){
+      std::string::size_type i = line.find("event");
+      if (i != std::string::npos) i += 5; // "event".size() == 5
+      if (i < line.size()) {
+        int index = atoi(&line.c_str()[i]);
+        
+        if (index != -1) {
+          std::stringstream input_dev_path;
+          input_dev_path << INPUT_EVENT_PATH;
+          input_dev_path << "event";
+          input_dev_path << index;
+
+          devices.push_back(input_dev_path.str());
+        }
+      }
+    }
+    //Generate score based on size of key bitmask
+    else if(line_type == 2){
+      std::string::size_type i = line.find("=");
+      std::string full_key_map = line.substr(i + 1);
+      score += full_key_map.length();
+      scores.push_back(score);
+      score = 0;
+    }
+    line_type = (line_type + 1) % 3;
   }
   
-  if (results.size() == 0) {
+  if (devices.size() == 0) {
     error(0, 0, "Couldn't determine keyboard device. :/");
     error(EXIT_FAILURE, 0, "Please post contents of your /proc/bus/input/devices file as a new bug report. Thanks!");
   }
 
-  args.device = results[0];  // for now, use only the first found device
+  //Choose device with the best score
+  int max_device = std::max_element(scores.begin(), scores.end()) - scores.begin();
+  args.device = devices[max_device];  // for now, use only the first found device
   
   // now we reclaim those root privileges
   seteuid(0); setegid(0);
@@ -731,4 +760,3 @@ int main(int argc, char** argv)
 {
   return logkeys::main(argc, argv);
 }
-
