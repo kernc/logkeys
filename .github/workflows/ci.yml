@@ -34,4 +34,5 @@ jobs:
 
       - name: Test
         run: |
+          cd build
           src/logkeys --help
