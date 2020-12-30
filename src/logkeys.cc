@@ -349,7 +349,7 @@ void determine_input_device()
   //Check for all devices with keymask ending with 'e' (means, they have Esc, KEY_1, KEY_2, so probably keyboard
   //Take the Name, Handlers, and KEY values
   const char* cmd = EXE_GREP " -B8 -E 'KEY=.*e$' /proc/bus/input/devices | "
-    EXE_GREP " -E 'Handlers|Name|KEY' ";
+    EXE_GREP " -E 'Name|Handlers|KEY' ";
   std::stringstream output(execute(cmd));
   
   std::vector<std::string> devices;
