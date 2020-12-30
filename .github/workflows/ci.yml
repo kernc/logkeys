@@ -23,7 +23,7 @@ jobs:
             autogen autotools-dev \
             kbd  # provides dumpkeys
 
-      - name: Build & Test
+      - name: Build
         env:
           CC: ${{ matrix.compiler }}
         run: |
@@ -31,3 +31,7 @@ jobs:
           cd build
           ../configure --prefix=/usr/local
           make
+
+      - name: Test
+        run: |
+          src/logkeys --help
