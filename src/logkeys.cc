@@ -346,7 +346,10 @@ void determine_input_device()
   // better be safe than sory: while running other programs, switch user to nobody
   setegid(65534); seteuid(65534);
   
-  //Check for all devices with keymask ending with 'e' (means, they have Esc, KEY_1, KEY_2, so probably keyboard
+  //Look for devices with keybit bitmask that has keys a keyboard doeas
+  //If a bitmask ends with 'e', it supports KEY_2, KEY_1, KEY_ESC, and KEY_RESERVED is set to 0, so it's probably a keyboard
+  //keybit:   https://github.com/torvalds/linux/blob/02de58b24d2e1b2cf947d57205bd2221d897193c/include/linux/input.h#L45
+  //keycodes: https://github.com/torvalds/linux/blob/139711f033f636cc78b6aaf7363252241b9698ef/include/uapi/linux/input-event-codes.h#L75
   //Take the Name, Handlers, and KEY values
   const char* cmd = EXE_GREP " -B8 -E 'KEY=.*e$' /proc/bus/input/devices | "
     EXE_GREP " -E 'Name|Handlers|KEY' ";
