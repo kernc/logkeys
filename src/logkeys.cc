@@ -110,7 +110,7 @@ void set_utf8_locale()
          strstr(locale, "utf-8") != NULL || strstr(locale, "utf8") != NULL) )
       ;  // if locale has "UTF-8" in its name, it is cool to do nothing
     else
-      error(EXIT_FAILURE, 0, "LC_CTYPE locale must be of UTF-8 type, or you need en_US.UTF-8 availabe");
+      error(EXIT_FAILURE, 0, "LC_CTYPE locale must be of UTF-8 type, or you need en_US.UTF-8 available");
   }
 }
 
