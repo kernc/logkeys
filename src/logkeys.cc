@@ -189,7 +189,7 @@ void determine_system_keymap()
   std::stringstream ss, dump(execute(COMMAND_STR_DUMPKEYS));  // see example output after i.e. `loadkeys slovene`
   std::string line;
 
-  unsigned int i = 0;   // keycode
+  unsigned int i = -1;   // keycode
   int index;
   int utf8code;      // utf-8 code of keysym answering keycode i
   
@@ -205,7 +205,7 @@ void determine_system_keymap()
       index = line.find("U+", index);
     }
     
-    if (++i >= sizeof(char_or_func)) break;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
+    if (++i >= sizeof(char_or_func)-1) break;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
     if (!is_char_key(i)) continue;  // only map character keys of keyboard
     
     assert(line.size() > 0);
