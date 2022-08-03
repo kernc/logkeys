@@ -93,6 +93,10 @@ on a virtual terminal outside of X (\fI/dev/ttyX\fR).
 See section \fBKEYMAP FORMAT\fR for exported keymap format.
 
 .TP
+\fB-\-no-bookends\fR
+When this option is set, logkeys doesn't log messages when starting and stopping.
+
+.TP
 \fB-\-no-func-keys\fR
 This option makes logkeys log all and only character key presses 
 (1, 2, ..., q, w, e, ..., a, s, d, f, ..., ", @, \\, ...).
@@ -105,10 +109,6 @@ logged, influenced by Shift and AltGr modifiers.
 \fB-\-no-timestamps\fR
 When this option is set, logkeys doesn't prepend timestamp to each line of log file.
 Timestamps are only logged when logkeys starts and stops.
-
-.TP
-\fB-\-no-bookends\fR
-When this option is set, logkeys doesn't log messages when starting and stopping.
 
 .TP
 \fB-\-post-size=\fISIZE\fR
