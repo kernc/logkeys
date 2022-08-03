@@ -628,10 +628,12 @@ void log_loop()
   time(&cur_time);
   strftime(timestamp, sizeof(timestamp), TIME_FORMAT, localtime(&cur_time));
 
-  if (args.flags & FLAG_NO_TIMESTAMPS)
-    file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
-  else
-    file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+  if (!(args.flags & FLAG_NO_BOOKENDS)) {
+    if (args.flags & FLAG_NO_TIMESTAMPS)
+      file_size += fprintf(out, "Logging started at %s\n\n", timestamp);
+    else
+      file_size += fprintf(out, "Logging started ...\n\n%s", timestamp);
+  }
   fflush(out);
 
   // infinite loop: exit gracefully by receiving SIGHUP, SIGINT or SIGTERM (of which handler closes input_fd)
@@ -647,9 +649,11 @@ void log_loop()
   }
 
   // append final timestamp, close files and exit
-  time(&cur_time);
-  strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
-  fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
+  if (!(args.flags & FLAG_NO_BOOKENDS)) {
+    time(&cur_time);
+    strftime(timestamp, sizeof(timestamp), "%F %T%z", localtime(&cur_time));
+    fprintf(out, "\n\nLogging stopped at %s\n\n", timestamp);
+  }
   fclose(out);
 }
 
