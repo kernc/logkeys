@@ -311,7 +311,7 @@ void export_keymap_to_file()
   char buffer[32];
   int buflen = 0;
   unsigned int index;
-  for (unsigned int i = 0; i < sizeof(char_or_func); ++i) {
+  for (unsigned int i = 0; i < sizeof(char_or_func)-1; ++i) {
     buflen = 0;
     if (is_char_key(i)) {
       index = to_char_keys_index(i);
