@@ -177,6 +177,15 @@ void set_signal_handling()
   sigaction(SIGCHLD, &act, NULL);
 }
 
+int parse_char_keycode(std::string string, int offset) {
+  while (string[offset] == ' ') offset++;
+  std::string numeric = string.substr(offset, 3);
+  unsigned int keycode = atoi(numeric.c_str());
+  if (keycode >= sizeof(char_or_func)-1) return -1;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
+  if (!is_char_key(keycode)) return -1;  // only map character keys of keyboard
+  return keycode;
+}
+
 void determine_system_keymap()
 {
   // custom map will be used; erase existing US keymapping
@@ -189,11 +198,11 @@ void determine_system_keymap()
   std::stringstream ss, dump(execute(COMMAND_STR_DUMPKEYS));  // see example output after i.e. `loadkeys slovene`
   std::string line;
 
-  unsigned int i = 0;   // keycode
   int index;
   int utf8code;      // utf-8 code of keysym answering keycode i
   
   while (std::getline(dump, line)) {
+    unsigned int keycode;
     ss.clear();
     ss.str("");
     utf8code = 0;
@@ -205,12 +214,11 @@ void determine_system_keymap()
       index = line.find("U+", index);
     }
     
-    if (++i >= sizeof(char_or_func)) break;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
-    if (!is_char_key(i)) continue;  // only map character keys of keyboard
-    
     assert(line.size() > 0);
     if (line[0] == 'k') {  // if line starts with 'keycode'
-      index = to_char_keys_index(i);
+      keycode = parse_char_keycode(line, 8); // skip "keycode "
+      if (keycode < 0) continue;
+      index = to_char_keys_index(keycode);
       
       ss << &line[14];  // 1st keysym starts at index 14 (skip "keycode XXX = ")
       ss >> std::hex >> utf8code;
@@ -230,19 +238,19 @@ void determine_system_keymap()
         altgr_keys[index] = static_cast<wchar_t>(utf8code);
       }
       
-      continue;
+    } else { // else if line starts with 'shift i'
+      keycode = parse_char_keycode(line, 15); // skip "\tshift\tkeycode " or "\taltgr\tkeycode "
+      if (keycode < 0) continue;
+      index = to_char_keys_index(keycode);
+      ss << &line[21];  // 1st keysym starts at index 21 (skip "\tshift\tkeycode XXX = " or "\taltgr\tkeycode XXX = ")
+      ss >> std::hex >> utf8code;
+      if (line[21] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;  // see line 0XB00CLUELESS
+    
+      if (line[1] == 's')  // if line starts with "shift"
+        shift_keys[index] = static_cast<wchar_t>(utf8code);
+      if (line[1] == 'a')  // if line starts with "altgr"
+        altgr_keys[index] = static_cast<wchar_t>(utf8code);
     }
-    
-    // else if line starts with 'shift i'
-    index = to_char_keys_index(--i);
-    ss << &line[21];  // 1st keysym starts at index 21 (skip "\tshift\tkeycode XXX = " or "\taltgr\tkeycode XXX = ")
-    ss >> std::hex >> utf8code;
-    if (line[21] == '+' && (utf8code & 0xB00)) utf8code ^= 0xB00;  // see line 0XB00CLUELESS
-    
-    if (line[1] == 's')  // if line starts with "shift"
-      shift_keys[index] = static_cast<wchar_t>(utf8code);
-    if (line[1] == 'a')  // if line starts with "altgr"
-      altgr_keys[index] = static_cast<wchar_t>(utf8code);
   } // while (getline(dump, line))
 }
 
