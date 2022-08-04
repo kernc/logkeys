@@ -202,7 +202,7 @@ void determine_system_keymap()
   int utf8code;      // utf-8 code of keysym answering keycode i
   
   while (std::getline(dump, line)) {
-    unsigned int keycode;
+    int keycode;
     ss.clear();
     ss.str("");
     utf8code = 0;
