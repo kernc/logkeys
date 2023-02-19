@@ -28,14 +28,15 @@ struct arguments
   std::string irc_port;     // if --post-irc effective, this holds the IRC port number
   off_t post_size;     // post log file to remote when of size post_size, --post-size switch
   int flags;           // holds the following option flags
-#define FLAG_EXPORT_KEYMAP    0x1  // export keymap obtained from dumpkeys, --export-keymap is used
-#define FLAG_NO_FUNC_KEYS     0x2  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
-#define FLAG_NO_TIMESTAMPS    0x4  // don't log timestamps, --no-timestamps switch
-#define FLAG_POST_HTTP        0x8  // post log to remote HTTP server, --post-http switch
-#define FLAG_POST_IRC        0x10  // post log to remote IRC server, --post-irc switch
-#define FLAG_POST_SIZE       0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
-#define FLAG_NO_DAEMON       0x40  // don't daemonize process, stay in foreground, --no-daemon switch
-#define FLAG_TIMESTAMP_EVERY 0x80  // log timestamps on every key, --timestamp-every switch
+#define FLAG_EXPORT_KEYMAP     0x1  // export keymap obtained from dumpkeys, --export-keymap is used
+#define FLAG_NO_FUNC_KEYS      0x2  // only log character keys (e.g. 'c', '2', etc.) and don't log function keys (e.g. <LShift>, etc.), --no-func-keys switch
+#define FLAG_NO_TIMESTAMPS     0x4  // don't log timestamps, --no-timestamps switch
+#define FLAG_POST_HTTP         0x8  // post log to remote HTTP server, --post-http switch
+#define FLAG_POST_IRC         0x10  // post log to remote IRC server, --post-irc switch
+#define FLAG_POST_SIZE        0x20  // post log to remote HTTP or IRC server when log of size optarg, --post-size
+#define FLAG_NO_DAEMON        0x40  // don't daemonize process, stay in foreground, --no-daemon switch
+#define FLAG_TIMESTAMP_EVERY  0x80  // log timestamps on every key, --timestamp-every switch
+#define FLAG_NO_BOOKENDS     0x100 // don't log "Staring logging..." and "Stopping logging..." messages
 } args = {0};  // default all args to 0x0 or ""
 
 
@@ -52,6 +53,7 @@ void process_command_line_arguments(int argc, char **argv)
     {"device",    required_argument, 0, 'd'},
     {"help",      no_argument,       0, '?'},
     {"export-keymap", required_argument, &flags, FLAG_EXPORT_KEYMAP},
+    {"no-bookends",   no_argument,       &flags, FLAG_NO_BOOKENDS},
     {"no-func-keys",  no_argument,       &flags, FLAG_NO_FUNC_KEYS},
     {"no-timestamps", no_argument,       &flags, FLAG_NO_TIMESTAMPS},
     {"post-http",     required_argument, &flags, FLAG_POST_HTTP},

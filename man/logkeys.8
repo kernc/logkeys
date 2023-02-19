@@ -4,7 +4,7 @@ logkeys \- a GNU/Linux keylogger that works!
 .SH SYNOPSIS
 .B logkeys \fB-s\fR [\fB-m \fIkeymap\fR | \fB-u\fR] [\fB-o \fIlogfile\fR] [\fB-d \fIdevice\fR]
 .br
-           [\fB--no-func-keys\fR] [\fB--no-timestamps\fR] 
+           [\fB--no-func-keys\fR] [\fB--no-timestamps\fR] [\fB--no-bookends\fR] 
 .br
            [\fB--post-http=\fIURL\fR] [\fB--post-size=\fISIZE\fR]
 .br
@@ -91,6 +91,10 @@ as complete deficient entries. It is also advised that you use \fB-\-export-keym
 on a virtual terminal outside of X (\fI/dev/ttyX\fR).
 .IP
 See section \fBKEYMAP FORMAT\fR for exported keymap format.
+
+.TP
+\fB-\-no-bookends\fR
+When this option is set, logkeys doesn't log messages when starting and stopping.
 
 .TP
 \fB-\-no-func-keys\fR
