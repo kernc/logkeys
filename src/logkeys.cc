@@ -189,7 +189,7 @@ void determine_system_keymap()
   std::stringstream ss, dump(execute(COMMAND_STR_DUMPKEYS));  // see example output after i.e. `loadkeys slovene`
   std::string line;
 
-  unsigned int i = 0;   // keycode
+  unsigned int i = -1;   // keycode
   int index;
   int utf8code;      // utf-8 code of keysym answering keycode i
   
@@ -205,7 +205,7 @@ void determine_system_keymap()
       index = line.find("U+", index);
     }
     
-    if (++i >= sizeof(char_or_func)) break;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
+    if (++i >= sizeof(char_or_func)-1) break;  // only ever map keycodes up to 128 (currently N_KEYS_DEFINED are used)
     if (!is_char_key(i)) continue;  // only map character keys of keyboard
     
     assert(line.size() > 0);
@@ -258,15 +258,12 @@ void parse_input_keymap()
   if (stdin == NULL)
     error(EXIT_FAILURE, errno, "Error opening input keymap '%s'", args.keymap.c_str());
   
-  unsigned int i = -1;
   unsigned int line_number = 0;
   wchar_t func_string[32];
   wchar_t line[32];
   
-  while (!feof(stdin)) {
-    
-    if (++i >= sizeof(char_or_func)) break;  // only ever read up to 128 keycode bindings (currently N_KEYS_DEFINED are used)
-    
+  // only ever read up to 128 keycode bindings (currently N_KEYS_DEFINED are used)
+  for (unsigned int i=0; i < sizeof(char_or_func)-1 && !feof(stdin); ++i) {
     if (is_used_key(i)) {
       ++line_number;
       if(fgetws(line, sizeof(line), stdin) == NULL) {
@@ -295,7 +292,7 @@ void parse_input_keymap()
         error_at_line(EXIT_FAILURE, 0, args.keymap.c_str(), line_number, "Invalid function key string");  // does this ever happen?
       wcscpy(func_keys[to_func_keys_index(i)], func_string);
     }
-  } // while (!feof(stdin))
+  } // for
   fclose(stdin);
   
   if (line_number < N_KEYS_DEFINED)
@@ -311,7 +308,7 @@ void export_keymap_to_file()
   char buffer[32];
   int buflen = 0;
   unsigned int index;
-  for (unsigned int i = 0; i < sizeof(char_or_func); ++i) {
+  for (unsigned int i = 0; i < sizeof(char_or_func)-1; ++i) {
     buflen = 0;
     if (is_char_key(i)) {
       index = to_char_keys_index(i);

@@ -40,19 +40,19 @@ const char char_or_func[] =  // c = character key, f = function key, _ = blank/e
 
 inline bool is_char_key(unsigned int code)
 {
-  assert(code < sizeof(char_or_func));
+  assert(code < sizeof(char_or_func)-1);
   return (char_or_func[code] == 'c');
 }
 
 inline bool is_func_key(unsigned int code)
 {
-  assert(code < sizeof(char_or_func));
+  assert(code < sizeof(char_or_func)-1);
   return (char_or_func[code] == 'f');
 }
 
 inline bool is_used_key(unsigned int code)
 {
-  assert(code < sizeof(char_or_func));
+  assert(code < sizeof(char_or_func)-1);
   return (char_or_func[code] != '_');
 }
 
