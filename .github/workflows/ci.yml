@@ -36,3 +36,8 @@ jobs:
         run: |
           cd build
           src/logkeys --help
+
+      - name: Run integration tests
+        run: |
+          sudo apt install python3-libevdev
+          scripts/simple_test.sh
