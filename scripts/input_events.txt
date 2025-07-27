@@ -1,0 +1,19 @@
+# This file contains a sequence of input events to be fed into
+# the fake input device created by the simple_test.sh script.
+# Each line represents a single input event, with the format:
+# <event_type> <event_code> <value>
+#
+# The events in this file correspond to the keystrokes "hello<enter>".
+
+EV_KEY	KEY_H	1
+EV_KEY	KEY_H	0
+EV_KEY	KEY_E	1
+EV_KEY	KEY_E	0
+EV_key	KEY_L	1
+EV_key	KEY_L	0
+EV_key	KEY_L	1
+EV_key	KEY_L	0
+EV_key	KEY_O	1
+EV_key	KEY_O	0
+EV_KEY	KEY_ENTER	1
+EV_KEY	KEY_ENTER	0
